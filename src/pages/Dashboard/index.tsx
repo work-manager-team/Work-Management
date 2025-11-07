@@ -1,7 +1,8 @@
 import React from "react";
 
-const Dashboard = () => {
-    const username = "admin";
+const Dashboard: React.FC = () => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const username = user?.username || "Người dùng";
 
     return (
         <div style={{ textAlign: "center", marginTop: "100px" }}>

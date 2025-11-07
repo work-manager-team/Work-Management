@@ -3,7 +3,11 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './login.css';
 
-const Login: React.FC = () => {
+interface LoginProps {
+    setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const Login: React.FC<LoginProps> = ({ setIsLoggedIn }) => {
     const navigate = useNavigate();
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
@@ -23,6 +27,8 @@ const Login: React.FC = () => {
 
             localStorage.setItem('token', res.data.token);
             localStorage.setItem('user', JSON.stringify(res.data.user));
+
+            setIsLoggedIn(true);
 
             navigate('/');
         } catch (err: any) {
