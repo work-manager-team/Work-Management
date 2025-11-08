@@ -1,45 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from './pages/Login/index.tsx';
 import Dashboard from './pages/Dashboard/index.tsx';
+import MainLayout from './layout/Mainlayout/Mainlayout.tsx';
 
-function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (token) setIsLoggedIn(true);
-    }, []);
-
+const App: React.FC = () => {
     return (
-        <BrowserRouter>
+        <Router>
             <Routes>
 
-                <Route
-                    path="/login"
-                    element={
-                        isLoggedIn ? (
-                            <Navigate to="/" replace />
-                        ) : (
-                            <Login setIsLoggedIn={setIsLoggedIn} />
-                        )
-                    }
-                />
+                <Route path="/login" element={<Login setIsLoggedIn={() => { }} />} />
 
 
                 <Route
                     path="/"
                     element={
-                        isLoggedIn ? (
+                        <MainLayout>
                             <Dashboard />
-                        ) : (
-                            <Navigate to="/login" replace />
-                        )
+                        </MainLayout>
                     }
                 />
+
+
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-        </BrowserRouter>
+        </Router>
     );
-}
+};
 
 export default App;
