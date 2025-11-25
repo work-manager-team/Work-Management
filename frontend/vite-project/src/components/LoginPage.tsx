@@ -15,11 +15,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const handleSubmit = () => {
     if (isLogin) {
       console.log('Login:', { username, password });
-      alert('Đăng nhập thành công!');
+      //alert('Đăng nhập thành công!');
       onLogin();
     } else {
       console.log('Register:', { username, email, password });
-      alert('Đăng ký thành công!');
+      //alert('Đăng ký thành công!');
       setIsLogin(true);
     }
   };

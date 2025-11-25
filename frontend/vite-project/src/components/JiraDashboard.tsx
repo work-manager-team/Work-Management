@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Star, Users, Plus, MoreHorizontal, Calendar, Bell, Folder, Settings, Table, User } from 'lucide-react';
-
+import { ChevronDown } from 'lucide-react'
 interface Card {
   id: string;
   title: string;
@@ -45,7 +45,7 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className="w-16 bg-purple-500 flex flex-col items-center py-4 space-y-6">
+      <div className="w-21 bg-purple-500 flex flex-col items-center py-4 space-y-6">
         <div className="text-white font-bold text-xl">Jira</div>
         
         <div className="flex flex-col space-y-4 mt-8">
@@ -53,19 +53,19 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
             <User size={20} />
           </button>
           
-          <button className="flex flex-col items-center text-white bg-purple-600 p-2 rounded">
+          <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
             <Table size={20} />
             <span className="text-xs mt-1">Boards</span>
           </button>
-          
+
+          <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
+            <Folder size={20} />
+            <span className="text-xs mt-1">Projects</span>
+          </button>
+
           <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
             <Users size={20} />
             <span className="text-xs mt-1">Members</span>
-          </button>
-          
-          <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
-            <Settings size={20} />
-            <span className="text-xs mt-1">Settings</span>
           </button>
           
           <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
@@ -89,8 +89,8 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
           </button>
           
           <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
-            <Folder size={20} />
-            <span className="text-xs mt-1">Projects</span>
+            <Settings size={20} />
+            <span className="text-xs mt-1">Settings</span>
           </button>
         </div>
       </div>
@@ -100,17 +100,21 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
         {/* Header */}
         <header className="bg-purple-400 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button className="text-white hover:bg-purple-500 px-3 py-1 rounded">
-              Workspace ▼
+            <button className="text-gray-800 hover:bg-purple-500 px-3 py-1 rounded flex items-center gap-1">
+              <span>Workspace</span>
+              <ChevronDown size={16} className="text-gray-800" />
             </button>
-            <button className="text-white hover:bg-purple-500 px-3 py-1 rounded">
-              Recent ▼
+            <button className="text-gray-800 hover:bg-purple-500 px-3 py-1 rounded flex items-center gap-1">
+              <span>Recent</span>
+              <ChevronDown size={16} className="text-gray-800" />
             </button>
-            <button className="text-white hover:bg-purple-500 px-3 py-1 rounded">
-              Starred ▼
+            <button className="text-gray-800 hover:bg-purple-500 px-3 py-1 rounded flex items-center gap-1">
+              <span>Starred</span>
+              <ChevronDown size={16} className="text-gray-800" />
             </button>
-            <button className="text-white hover:bg-purple-500 px-3 py-1 rounded">
-              Templates ▼
+            <button className="text-gray-800 hover:bg-purple-500 px-3 py-1 rounded flex items-center gap-1">
+              <span>Templates</span>
+              <ChevronDown size={16} className="text-gray-800" />
             </button>
           </div>
           
@@ -118,7 +122,7 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
             <input
               type="text"
               placeholder="Search"
-              className="bg-purple-300 text-white placeholder-purple-100 px-4 py-1.5 rounded focus:outline-none focus:bg-purple-200"
+              className="bg-purple-300 text-black-800 placeholder-grey-800 px-4 py-1.5 rounded focus:outline-none focus:bg-purple-200"
             />
             <button className="bg-cyan-400 hover:bg-cyan-500 text-white px-4 py-1.5 rounded font-medium">
               Create
@@ -129,9 +133,9 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
             </button>
 
             <button onClick={onLogout}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded font-medium"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded font-medium"
             >
-              Logout
+              Log out
             </button>
           </div>
         </header>
@@ -166,8 +170,9 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
               </button>
               <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded flex items-center space-x-1">
                 <span>Board</span>
+                <ChevronDown size={16} className="text-gray-800" />
               </button>
-              <button className="text-gray-500 hover:text-gray-700">▼</button>
+              
             </div>
 
             {/* Kanban Board */}
