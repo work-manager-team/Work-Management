@@ -1,49 +1,191 @@
-.login-container {
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+* {
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+}
+
+/* Page background set to white as requested */
+html,
+body {
+    background: #ffffff;
+    height: 100%;
+    margin: 0;
+}
+
+.login-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    background: #eef2f3;
+    min-height: 100vh;
+    gap: 36px;
+    padding: 40px 20px;
+    background: #ffffff;
+    /* white background */
+}
+
+.mockup-container {
+    width: 520px;
+    /* tăng kích thước mặc định */
+    max-width: 60%;
+    /* co giãn theo viewport */
+    min-width: 320px;
+}
+
+.mockup-img {
+    width: 100%;
+    height: auto;
+    max-height: 75vh;
+    /* không quá cao so với viewport */
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(15, 22, 30, 0.08);
+    object-fit: cover;
+    display: block;
+    border: 1px solid rgba(20, 30, 40, 0.04);
+}
+
+.right-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .login-box {
-    background: white;
-    padding: 40px;
-    border-radius: 16px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    width: 350px;
+    width: 380px;
+    padding: 32px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid rgba(20, 30, 40, 0.04);
+    box-shadow: 0 10px 30px rgba(20, 30, 40, 0.06);
+    animation: slideUp 0.5s ease;
     display: flex;
     flex-direction: column;
-    gap: 16px;
 }
 
 .login-box h2 {
+    font-size: 22px;
     text-align: center;
-    color: #333;
+    margin-bottom: 8px;
+    color: #0f1720;
+    font-weight: 600;
+}
+
+.login-box p.subtitle {
+    text-align: center;
+    color: #4b5563;
+    font-size: 13px;
+    margin: 0 0 10px 0;
 }
 
 .login-box input {
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    width: 100%;
+    padding: 12px 14px;
+    background: #f7fbff;
+    border: 1px solid #e6eef8;
+    border-radius: 10px;
+    margin-top: 12px;
+    color: #0b1620;
+    transition: 0.18s;
+}
+
+.login-box input::placeholder {
+    color: #9aa6b2;
+}
+
+.login-box input:focus {
+    border-color: #a3c7ff;
+    box-shadow: 0 6px 20px rgba(44, 128, 255, 0.08);
+    outline: none;
 }
 
 .login-box button {
-    background: #1677ff;
-    color: white;
-    border: none;
+    width: 100%;
+    margin-top: 20px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: 10px;
+    border: none;
     cursor: pointer;
-    font-weight: bold;
+    background: linear-gradient(90deg, #3772ff 0%, #1a64ff 100%);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    transition: 0.18s;
+    box-shadow: 0 10px 22px rgba(26, 100, 255, 0.12);
 }
 
 .login-box button:hover {
-    background: #125fd1;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 34px rgba(26, 100, 255, 0.16);
 }
 
 .error {
-    color: red;
-    font-size: 14px;
+    margin-top: 12px;
+    padding: 10px;
     text-align: center;
+    border-radius: 8px;
+    font-size: 14px;
+    background: rgba(255, 80, 80, 0.08);
+    color: #b91c1c;
+    border: 1px solid rgba(185, 28, 28, 0.06);
+}
+
+.register-box {
+    margin-top: 18px;
+    width: 380px;
+    padding: 14px 18px;
+    text-align: center;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(20, 30, 40, 0.03);
+    box-shadow: 0 8px 22px rgba(19, 25, 33, 0.03);
+    color: #334155;
+}
+
+.register-link {
+    color: #1e63ff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.register-link:hover {
+    text-decoration: underline;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 900px) {
+    .login-wrapper {
+        flex-direction: column;
+        padding: 24px;
+    }
+
+    .mockup-container {
+        width: 320px;
+    }
+
+    .login-box,
+    .register-box {
+        width: 100%;
+        max-width: 420px;
+    }
+}
+
+@media (max-width: 420px) {
+    .mockup-container {
+        display: none;
+    }
+
+    .login-wrapper {
+        padding: 16px;
+    }
 }
