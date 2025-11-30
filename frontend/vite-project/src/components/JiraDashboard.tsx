@@ -14,9 +14,10 @@ interface Column {
 
 interface JiraDashboardProps {
   onLogout: () => void;
+  onNavigate?: (page: string) => void;
 }
 
-const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
+const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout, onNavigate }) => {
   const [columns, setColumns] = useState<Column[]>([
     {
       id: 'todo',
@@ -58,10 +59,14 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout }) => {
             <span className="text-xs mt-1">Boards</span>
           </button>
 
-          <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
+          <button 
+            onClick={() => onNavigate?.('projects')}
+            className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded"
+          >
             <Folder size={20} />
             <span className="text-xs mt-1">Projects</span>
           </button>
+          
 
           <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
             <Users size={20} />
