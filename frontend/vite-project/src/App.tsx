@@ -2,8 +2,8 @@ import { useState } from 'react'
 import LoginPage from './components/LoginPage'
 import JiraDashboard from './components/JiraDashboard'
 import ProjectsPage from './components/ProjectsPage'
-
-type Page = 'dashboard' | 'projects';
+import MembersPage from './components/MembersPage'
+type Page = 'dashboard' | 'projects' | 'members';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,6 +34,11 @@ function App() {
       {currentPage === 'projects' ? (
         <ProjectsPage 
           onLogout={handleLogout} 
+          onNavigate={handleNavigate}
+        />
+      ) : currentPage === 'members' ? (
+        <MembersPage 
+          onLogout={handleLogout}
           onNavigate={handleNavigate}
         />
       ) : (

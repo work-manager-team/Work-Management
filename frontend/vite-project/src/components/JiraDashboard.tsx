@@ -68,7 +68,9 @@ const JiraDashboard: React.FC<JiraDashboardProps> = ({ onLogout, onNavigate }) =
           </button>
           
 
-          <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
+          <button 
+            onClick={() => onNavigate?.('members')}
+            className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
             <Users size={20} />
             <span className="text-xs mt-1">Members</span>
           </button>
