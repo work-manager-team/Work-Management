@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Facebook, MessageCircle } from 'lucide-react';
 
 interface LoginPageProps {
-    onLogin: () => void;
+  onLogin: () => void;
 }
 
 
@@ -12,14 +12,45 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isLogin) {
-      console.log('Login:', { username, password });
-      //alert('Đăng nhập thành công!');
-      onLogin();
+      try {
+        const response = await fetch(
+          "http://work-management-chi.vercel.app/users/login",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              emailOrUsername: username,
+              password: password,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+          console.log("Login success:", data);
+
+          // Lưu user và token vào localStorage
+          localStorage.setItem("user", JSON.stringify(data.user));
+          if (data.accessToken) {
+            localStorage.setItem("accessToken", data.accessToken);
+          }
+
+          onLogin(); // gọi callback từ props
+        } else {
+          alert(data.message || "Login failed");
+        }
+      } catch (error) {
+        console.error("Login error:", error);
+        alert("An error occurred. Please try again.");
+      }
     } else {
-      console.log('Register:', { username, email, password });
-      //alert('Đăng ký thành công!');
+      // Đăng ký (Register)
+      console.log("Register:", { username, email, password });
       setIsLogin(true);
     }
   };
@@ -127,14 +158,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <button className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
             <Facebook size={24} />
           </button>
-          
+
           <button className="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
             <MessageCircle size={24} />
           </button>
-          
+
           <button className="w-12 h-12 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.654-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.654-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
             </svg>
           </button>
         </div>
