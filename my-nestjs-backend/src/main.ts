@@ -13,14 +13,15 @@ export const createNestServer = async (expressInstance) => {
     new ExpressAdapter(expressInstance),
   );
 
-  // Enable CORS
+  // Enable CORS - Allow all origins
   app.enableCors({
-    origin: process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',')
-      : true, // true allows all origins
+    origin: (origin, callback) => {
+      // Allow all origins
+      callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    credentials: false, // Set to false when allowing all origins
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
