@@ -15,8 +15,14 @@ export const createNestServer = async (expressInstance) => {
 
   // Enable CORS
   app.enableCors({
-    origin: '*',
-    credentials: true,
+    origin: process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(',')
+      : true, // true allows all origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: false, // Set to false when allowing all origins
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Enable global validation
