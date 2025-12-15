@@ -1,9 +1,9 @@
 // src/projects/projects.service.ts
 import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { DRIZZLE } from '../db/database.module';
-import { projects, projectMembers, Project } from '../db/schema';
+import { projects, projectMembers, sprints, Project } from '../db/schema';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import * as schema from '../db/schema';
@@ -142,5 +142,45 @@ export class ProjectsService {
       );
 
     return member ? member.role : null;
+  }
+
+  // Get detailed project information
+  async getProjectDetails(projectId: number) {
+    const project = await this.findOne(projectId);
+
+    // Count total members
+    const [memberCount] = await this.db
+      .select({ value: count() })
+      .from(projectMembers)
+      .where(
+        and(
+          eq(projectMembers.projectId, projectId),
+          eq(projectMembers.status, 'active')
+        )
+      );
+
+    // Count total sprints
+    const [sprintCount] = await this.db
+      .select({ value: count() })
+      .from(sprints)
+      .where(eq(sprints.projectId, projectId));
+
+    // Count completed sprints
+    const [completedSprintCount] = await this.db
+      .select({ value: count() })
+      .from(sprints)
+      .where(
+        and(
+          eq(sprints.projectId, projectId),
+          eq(sprints.status, 'completed')
+        )
+      );
+
+    return {
+      ...project,
+      memberCount: memberCount.value,
+      totalSprints: sprintCount.value,
+      completedSprints: completedSprintCount.value,
+    };
   }
 }
