@@ -161,7 +161,7 @@ export class SprintsService {
       }
     }
 
-    const [comment] = await this.db
+    const result = await this.db
       .insert(sprintComments)
       .values({
         sprintId: createCommentDto.sprintId,
@@ -171,7 +171,7 @@ export class SprintsService {
       })
       .returning();
 
-    return comment;
+    return result[0];
   }
 
   async getComments(sprintId: number, userId: number): Promise<SprintComment[]> {
