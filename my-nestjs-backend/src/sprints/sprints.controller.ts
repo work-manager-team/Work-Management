@@ -70,4 +70,33 @@ export class SprintsController {
     const userId = 1;
     return this.sprintsService.completeSprint(id, userId);
   }
+
+  // Sprint Comments
+  @Post(':id/comments')
+  @HttpCode(HttpStatus.CREATED)
+  createComment(
+    @Param('id', ParseIntPipe) sprintId: number,
+    @Body() body: { content: string; parentCommentId?: number },
+  ) {
+    // TODO: Get userId from JWT token
+    const userId = 1;
+    return this.sprintsService.createComment(
+      { sprintId, content: body.content, parentCommentId: body.parentCommentId },
+      userId,
+    );
+  }
+
+  @Get(':id/comments')
+  getComments(@Param('id', ParseIntPipe) sprintId: number) {
+    // TODO: Get userId from JWT token
+    const userId = 1;
+    return this.sprintsService.getComments(sprintId, userId);
+  }
+
+  @Get('comments/:commentId/replies')
+  getCommentReplies(@Param('commentId', ParseIntPipe) commentId: number) {
+    // TODO: Get userId from JWT token
+    const userId = 1;
+    return this.sprintsService.getCommentReplies(commentId, userId);
+  }
 }

@@ -263,6 +263,33 @@ export const comments = pgTable(
 );
 
 // -----------------------------------------------------
+// Table: sprint_comments
+// -----------------------------------------------------
+export const sprintComments = pgTable(
+  'sprint_comments',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    sprintId: bigint('sprint_id', { mode: 'number' })
+      .notNull()
+      .references(() => sprints.id, { onDelete: 'cascade' }),
+    userId: bigint('user_id', { mode: 'number' })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    parentCommentId: bigint('parent_comment_id', { mode: 'number' }).references(() => sprintComments.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    sprintIdx: index('idx_sprint_comments_sprint').on(table.sprintId),
+    userIdx: index('idx_sprint_comments_user').on(table.userId),
+    parentIdx: index('idx_sprint_comments_parent').on(table.parentCommentId),
+  })
+);
+
+// -----------------------------------------------------
 // Table: attachments
 // -----------------------------------------------------
 export const attachments = pgTable(
@@ -435,6 +462,7 @@ export const sprintsRelations = relations(sprints, ({ one, many }) => ({
     references: [projects.id],
   }),
   tasks: many(tasks),
+  comments: many(sprintComments),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -484,6 +512,23 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
     relationName: 'replies',
   }),
   replies: many(comments, { relationName: 'replies' }),
+}));
+
+export const sprintCommentsRelations = relations(sprintComments, ({ one, many }) => ({
+  sprint: one(sprints, {
+    fields: [sprintComments.sprintId],
+    references: [sprints.id],
+  }),
+  user: one(users, {
+    fields: [sprintComments.userId],
+    references: [users.id],
+  }),
+  parentComment: one(sprintComments, {
+    fields: [sprintComments.parentCommentId],
+    references: [sprintComments.id],
+    relationName: 'replies',
+  }),
+  replies: many(sprintComments, { relationName: 'replies' }),
 }));
 
 export const attachmentsRelations = relations(attachments, ({ one }) => ({
@@ -561,6 +606,9 @@ export type NewTask = typeof tasks.$inferInsert;
 
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+
+export type SprintComment = typeof sprintComments.$inferSelect;
+export type NewSprintComment = typeof sprintComments.$inferInsert;
 
 export type Attachment = typeof attachments.$inferSelect;
 export type NewAttachment = typeof attachments.$inferInsert;
