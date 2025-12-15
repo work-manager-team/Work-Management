@@ -179,4 +179,34 @@ export class UsersService {
     const { passwordHash, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
+
+  async changePassword(userId: number, oldPassword: string, newPassword: string): Promise<void> {
+    // Get user with password hash
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      throw new NotFoundException(`User với ID ${userId} không tồn tại`);
+    }
+
+    // Verify old password
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new ConflictException('Mật khẩu cũ không đúng');
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.db
+      .update(users)
+      .set({
+        passwordHash: newPasswordHash,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
 }
