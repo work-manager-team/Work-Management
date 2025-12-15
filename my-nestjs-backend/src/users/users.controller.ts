@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Put,
+  Patch,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -15,6 +16,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('users')
 export class UsersController {
@@ -59,6 +61,23 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    await this.usersService.changePassword(
+      id,
+      changePasswordDto.oldPassword,
+      changePasswordDto.newPassword,
+    );
+    return {
+      statusCode: 200,
+      message: 'Đổi mật khẩu thành công',
+    };
   }
 
   @Delete(':id')
