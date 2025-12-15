@@ -64,6 +64,11 @@ export class ProjectsController {
     return this.projectsService.remove(id, userId);
   }
 
+  @Get(':id/details')
+  async getProjectDetails(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.getProjectDetails(id);
+  }
+
   @Get(':id/role')
   async getUserRole(@Param('id', ParseIntPipe) id: number) {
     // TODO: Get userId from JWT token
