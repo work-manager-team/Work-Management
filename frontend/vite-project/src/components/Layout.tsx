@@ -22,7 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
 
                     <Link to="/dashboard" className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
                         <Table size={20} />
-                        <span className="text-xs mt-1">Boards</span>
+                        <span className="text-xs mt-1">Dashboard</span>
                     </Link>
 
                     <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
@@ -35,10 +35,10 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
                         <span className="text-xs mt-1">Members</span>
                     </button>
 
-                    <button className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
+                    <Link to="/boards" className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
                         <Table size={20} />
-                        <span className="text-xs mt-1">Table</span>
-                    </button>
+                        <span className="text-xs mt-1">Boards</span>
+                    </Link>
 
                     <Link to="/calendar" className="flex flex-col items-center text-white hover:bg-purple-600 p-2 rounded">
                         <Calendar size={20} />
@@ -141,7 +141,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
                 </header>
 
                 {/* Content Area */}
-                <div className="flex-1 overflow-auto p-6">
+                <div id="app-content" className="flex-1 overflow-auto p-6">
                     {children}
                 </div>
             </div>

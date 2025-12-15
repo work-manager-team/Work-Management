@@ -16,7 +16,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     if (isLogin) {
       try {
         const response = await fetch(
-          "http://work-management-chi.vercel.app/users/login",
+          "https://work-management-chi.vercel.app/users/login",
           {
             method: "POST",
             headers: {

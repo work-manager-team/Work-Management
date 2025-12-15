@@ -146,8 +146,8 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
                             <div
                                 key={notification.id}
                                 className={`border rounded-lg p-4 transition ${notification.read
-                                        ? 'bg-white border-gray-200'
-                                        : `${getTypeBgColor(notification.type)}`
+                                    ? 'bg-white border-gray-200'
+                                    : `${getTypeBgColor(notification.type)}`
                                     }`}
                             >
                                 <div className="flex items-start justify-between">

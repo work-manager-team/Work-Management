@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
-import { Settings, Lock, Bell, Users, Palette, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, User, Edit2, Save, AlertCircle, Loader } from 'lucide-react';
 import Layout from './Layout';
+import { useTheme } from '../context/ThemeContext';
+
+interface UserProfile {
+    id: number;
+    email: string;
+    username: string;
+    fullName: string;
+    avatarUrl: string;
+}
 
 interface SettingsPageProps {
     onLogout: () => void;
@@ -8,22 +17,99 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout }) => {
     const [activeTab, setActiveTab] = useState('general');
-    const [settings, setSettings] = useState({
-        fullName: 'John Doe',
-        email: 'john@example.com',
-        language: 'en',
-        theme: 'light',
-        notifications: true,
-        emailNotifications: true,
-        twoFactor: false,
-        privacy: 'public'
-    });
+    const { theme, setTheme } = useTheme();
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [editedProfile, setEditedProfile] = useState<Partial<UserProfile> | null>(null);
 
-    const [saved, setSaved] = useState(false);
+    useEffect(() => {
+        fetchUserProfile();
+    }, []);
 
-    const handleSave = () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+    const fetchUserProfile = async () => {
+        try {
+            setLoading(true);
+            setError('');
+
+            const userData = localStorage.getItem('user');
+            if (!userData) {
+                setError('User not found. Please login again.');
+                return;
+            }
+
+            const user = JSON.parse(userData);
+            const userId = user.id;
+
+            const response = await fetch(
+                `https://work-management-chi.vercel.app/users/${userId}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch profile');
+            }
+
+            const data = await response.json();
+            setProfile(data);
+            setEditedProfile(data);
+        } catch (err) {
+            setError('Failed to load profile. Please try again.');
+            console.error('Error fetching profile:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!profile || !editedProfile) return;
+
+        try {
+            setSaving(true);
+            setError('');
+
+            const response = await fetch(
+                `https://work-management-chi.vercel.app/users/${profile.id}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fullName: editedProfile.fullName,
+                        email: editedProfile.email,
+                        avatarUrl: editedProfile.avatarUrl,
+                        username: editedProfile.username,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to update profile');
+            }
+
+            const updatedData = await response.json();
+            setProfile(updatedData);
+            setEditedProfile(updatedData);
+            localStorage.setItem('user', JSON.stringify(updatedData));
+            setIsEditing(false);
+        } catch (err) {
+            setError('Failed to save profile. Please try again.');
+            console.error('Error saving profile:', err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleThemeChange = (newTheme: 'light' | 'dark') => {
+        setTheme(newTheme);
     };
 
     return (
@@ -31,255 +117,225 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout }) => {
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6 text-gray-800">Settings</h1>
 
-                <div className="flex gap-6">
-                    {/* Sidebar Navigation */}
-                    <div className="w-48">
-                        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                {/* Error Message */}
+                {error && !loading && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
+                        <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-red-700 text-sm">{error}</p>
                             <button
-                                onClick={() => setActiveTab('general')}
-                                className={`w-full text-left px-4 py-3 font-medium transition border-l-4 ${activeTab === 'general'
-                                        ? 'bg-purple-50 border-purple-500 text-purple-600'
-                                        : 'border-transparent text-gray-700 hover:bg-gray-50'
-                                    }`}
+                                onClick={fetchUserProfile}
+                                className="text-red-600 hover:text-red-700 text-sm font-medium mt-2"
                             >
-                                <div className="flex items-center space-x-2">
-                                    <Settings size={18} />
-                                    <span>General</span>
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('notification')}
-                                className={`w-full text-left px-4 py-3 font-medium transition border-l-4 ${activeTab === 'notification'
-                                        ? 'bg-purple-50 border-purple-500 text-purple-600'
-                                        : 'border-transparent text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <Bell size={18} />
-                                    <span>Notifications</span>
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('privacy')}
-                                className={`w-full text-left px-4 py-3 font-medium transition border-l-4 ${activeTab === 'privacy'
-                                        ? 'bg-purple-50 border-purple-500 text-purple-600'
-                                        : 'border-transparent text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <Lock size={18} />
-                                    <span>Privacy & Security</span>
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('appearance')}
-                                className={`w-full text-left px-4 py-3 font-medium transition border-l-4 ${activeTab === 'appearance'
-                                        ? 'bg-purple-50 border-purple-500 text-purple-600'
-                                        : 'border-transparent text-gray-700 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <Palette size={18} />
-                                    <span>Appearance</span>
-                                </div>
+                                Try again
                             </button>
                         </div>
                     </div>
+                )}
 
-                    {/* Content Area */}
-                    <div className="flex-1">
-                        <div className="bg-white rounded-lg shadow-md p-6">
-                            {/* General Tab */}
-                            {activeTab === 'general' && (
-                                <div>
-                                    <h2 className="text-2xl font-semibold mb-6 text-gray-800">General Settings</h2>
+                {/* Loading State */}
+                {loading && (
+                    <div className="bg-white rounded-lg shadow-md p-12 flex flex-col items-center justify-center">
+                        <Loader size={48} className="text-purple-500 animate-spin mb-4" />
+                        <p className="text-gray-600 text-lg">Loading settings...</p>
+                    </div>
+                )}
 
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Full Name
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={settings.fullName}
-                                                onChange={(e) => setSettings({ ...settings, fullName: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Email
-                                            </label>
-                                            <input
-                                                type="email"
-                                                value={settings.email}
-                                                onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Language
-                                            </label>
-                                            <select
-                                                value={settings.language}
-                                                onChange={(e) => setSettings({ ...settings, language: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                            >
-                                                <option value="en">English</option>
-                                                <option value="vi">Tiếng Việt</option>
-                                                <option value="es">Español</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Notification Tab */}
-                            {activeTab === 'notification' && (
-                                <div>
-                                    <h2 className="text-2xl font-semibold mb-6 text-gray-800">Notification Settings</h2>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <p className="font-medium text-gray-800">In-App Notifications</p>
-                                                <p className="text-sm text-gray-600">Receive notifications within the app</p>
-                                            </div>
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.notifications}
-                                                onChange={(e) => setSettings({ ...settings, notifications: e.target.checked })}
-                                                className="w-4 h-4 cursor-pointer"
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <p className="font-medium text-gray-800">Email Notifications</p>
-                                                <p className="text-sm text-gray-600">Receive email notifications about updates</p>
-                                            </div>
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.emailNotifications}
-                                                onChange={(e) => setSettings({ ...settings, emailNotifications: e.target.checked })}
-                                                className="w-4 h-4 cursor-pointer"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Privacy & Security Tab */}
-                            {activeTab === 'privacy' && (
-                                <div>
-                                    <h2 className="text-2xl font-semibold mb-6 text-gray-800">Privacy & Security</h2>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                            <div>
-                                                <p className="font-medium text-gray-800">Two-Factor Authentication</p>
-                                                <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
-                                            </div>
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.twoFactor}
-                                                onChange={(e) => setSettings({ ...settings, twoFactor: e.target.checked })}
-                                                className="w-4 h-4 cursor-pointer"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Profile Privacy
-                                            </label>
-                                            <select
-                                                value={settings.privacy}
-                                                onChange={(e) => setSettings({ ...settings, privacy: e.target.value })}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                            >
-                                                <option value="public">Public</option>
-                                                <option value="friends">Friends Only</option>
-                                                <option value="private">Private</option>
-                                            </select>
-                                        </div>
-
-                                        <button className="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition">
-                                            Change Password
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Appearance Tab */}
-                            {activeTab === 'appearance' && (
-                                <div>
-                                    <h2 className="text-2xl font-semibold mb-6 text-gray-800">Appearance</h2>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-4">
-                                            Theme
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <button
-                                                onClick={() => setSettings({ ...settings, theme: 'light' })}
-                                                className={`p-4 rounded-lg border-2 transition ${settings.theme === 'light'
-                                                        ? 'border-purple-500 bg-purple-50'
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <div className="text-center">
-                                                    <div className="w-16 h-12 bg-white border border-gray-300 rounded mb-2 mx-auto"></div>
-                                                    <p className="font-medium text-gray-800">Light</p>
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={() => setSettings({ ...settings, theme: 'dark' })}
-                                                className={`p-4 rounded-lg border-2 transition ${settings.theme === 'dark'
-                                                        ? 'border-purple-500 bg-purple-50'
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <div className="text-center">
-                                                    <div className="w-16 h-12 bg-gray-800 border border-gray-700 rounded mb-2 mx-auto"></div>
-                                                    <p className="font-medium text-gray-800">Dark</p>
-                                                </div>
-                                            </button>
-
-                                            <button
-                                                onClick={() => setSettings({ ...settings, theme: 'auto' })}
-                                                className={`p-4 rounded-lg border-2 transition ${settings.theme === 'auto'
-                                                        ? 'border-purple-500 bg-purple-50'
-                                                        : 'border-gray-200 hover:border-gray-300'
-                                                    }`}
-                                            >
-                                                <div className="text-center">
-                                                    <div className="w-16 h-12 bg-gradient-to-r from-white to-gray-800 border border-gray-300 rounded mb-2 mx-auto"></div>
-                                                    <p className="font-medium text-gray-800">Auto</p>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Save Button */}
-                            <div className="mt-8 flex items-center justify-between">
+                {/* Settings Content */}
+                {!loading && profile && (
+                    <div className="flex gap-6">
+                        {/* Sidebar Navigation */}
+                        <div className="w-48">
+                            <div className="bg-white rounded-lg shadow-md overflow-hidden">
                                 <button
-                                    onClick={handleSave}
-                                    className="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-medium transition"
+                                    onClick={() => setActiveTab('general')}
+                                    className={`w-full text-left px-4 py-3 font-medium transition border-l-4 ${activeTab === 'general'
+                                        ? 'bg-purple-50 border-purple-500 text-purple-600'
+                                        : 'border-transparent text-gray-700 hover:bg-gray-50'
+                                        }`}
                                 >
-                                    <Save size={18} />
-                                    <span>Save Changes</span>
+                                    <div className="flex items-center space-x-2">
+                                        <Settings size={18} />
+                                        <span>General</span>
+                                    </div>
                                 </button>
-                                {saved && <p className="text-green-600 font-medium">✓ Changes saved successfully!</p>}
+                                <button
+                                    onClick={() => setActiveTab('user')}
+                                    className={`w-full text-left px-4 py-3 font-medium transition border-l-4 ${activeTab === 'user'
+                                        ? 'bg-purple-50 border-purple-500 text-purple-600'
+                                        : 'border-transparent text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <User size={18} />
+                                        <span>User</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="flex-1">
+                            <div className="bg-white rounded-lg shadow-md p-6">
+                                {/* General Tab */}
+                                {activeTab === 'general' && (
+                                    <div>
+                                        <h2 className="text-2xl font-semibold mb-6 text-gray-800">General Settings</h2>
+
+                                        <div className="space-y-6">
+                                            {/* Theme Section */}
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-gray-800 mb-4">Appearance</h3>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-4">
+                                                        Theme
+                                                    </label>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <button
+                                                            onClick={() => handleThemeChange('light')}
+                                                            className={`p-4 rounded-lg border-2 transition ${theme === 'light'
+                                                                ? 'border-purple-500 bg-purple-50'
+                                                                : 'border-gray-200 hover:border-gray-300'
+                                                                }`}
+                                                        >
+                                                            <div className="text-center">
+                                                                <div className="w-16 h-12 bg-white border border-gray-300 rounded mb-2 mx-auto"></div>
+                                                                <p className="font-medium text-gray-800">Light</p>
+                                                            </div>
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => handleThemeChange('dark')}
+                                                            className={`p-4 rounded-lg border-2 transition ${theme === 'dark'
+                                                                ? 'border-purple-500 bg-purple-50'
+                                                                : 'border-gray-200 hover:border-gray-300'
+                                                                }`}
+                                                        >
+                                                            <div className="text-center">
+                                                                <div className="w-16 h-12 bg-gray-800 border border-gray-700 rounded mb-2 mx-auto"></div>
+                                                                <p className="font-medium text-gray-800">Dark</p>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* User Tab */}
+                                {activeTab === 'user' && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h2 className="text-2xl font-semibold text-gray-800">User Information</h2>
+                                            <button
+                                                onClick={() => {
+                                                    if (isEditing) {
+                                                        handleSave();
+                                                    } else {
+                                                        setIsEditing(true);
+                                                    }
+                                                }}
+                                                disabled={saving}
+                                                className="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            >
+                                                {saving ? (
+                                                    <>
+                                                        <Loader size={18} className="animate-spin" />
+                                                        <span>Saving...</span>
+                                                    </>
+                                                ) : isEditing ? (
+                                                    <>
+                                                        <Save size={18} />
+                                                        <span>Save</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Edit2 size={18} />
+                                                        <span>Edit</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {/* Full Name */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Full Name
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editedProfile?.fullName || ''}
+                                                        onChange={(e) => setEditedProfile({ ...editedProfile, fullName: e.target.value })}
+                                                        disabled={saving}
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-800 px-4 py-2">{profile.fullName}</p>
+                                                )}
+                                            </div>
+
+                                            {/* Email */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Email
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="email"
+                                                        value={editedProfile?.email || ''}
+                                                        onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
+                                                        disabled={saving}
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-800 px-4 py-2">{profile.email}</p>
+                                                )}
+                                            </div>
+
+                                            {/* Username */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Username
+                                                </label>
+                                                {isEditing ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editedProfile?.username || ''}
+                                                        onChange={(e) => setEditedProfile({ ...editedProfile, username: e.target.value })}
+                                                        disabled={saving}
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                                                    />
+                                                ) : (
+                                                    <p className="text-gray-800 px-4 py-2">@{profile.username}</p>
+                                                )}
+                                            </div>
+
+                                            {/* Avatar URL */}
+                                            {isEditing && (
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Avatar URL
+                                                    </label>
+                                                    <input
+                                                        type="url"
+                                                        value={editedProfile?.avatarUrl || ''}
+                                                        onChange={(e) => setEditedProfile({ ...editedProfile, avatarUrl: e.target.value })}
+                                                        disabled={saving}
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                                                        placeholder="https://example.com/avatar.jpg"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         </Layout>
     );
