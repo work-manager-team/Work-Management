@@ -68,7 +68,7 @@ export const taskPriorityEnum = pgEnum('task_priority', [
 ]);
 
 // Sprint status
-export const sprintStatusEnum = pgEnum('sprint_status', ['planned', 'active', 'completed']);
+export const sprintStatusEnum = pgEnum('sprint_status', ['planned', 'active', 'completed', 'cancelled']);
 
 // Change type (cho task history)
 export const changeTypeEnum = pgEnum('change_type', [
