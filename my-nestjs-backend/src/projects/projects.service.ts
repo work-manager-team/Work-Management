@@ -1,9 +1,9 @@
 // src/projects/projects.service.ts
 import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, ilike, desc, or } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { DRIZZLE } from '../db/database.module';
-import { projects, projectMembers, sprints, Project } from '../db/schema';
+import { projects, projectMembers, sprints, tasks, taskHistory, users, Project } from '../db/schema';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import * as schema from '../db/schema';
@@ -41,6 +41,20 @@ export class ProjectsService {
 
   async findAll(): Promise<Project[]> {
     return await this.db.select().from(projects);
+  }
+
+  async searchByName(searchTerm: string): Promise<Project[]> {
+    return await this.db
+      .select()
+      .from(projects)
+      .where(ilike(projects.name, `%${searchTerm}%`));
+  }
+
+  async getProjectCount(): Promise<number> {
+    const [result] = await this.db
+      .select({ value: count() })
+      .from(projects);
+    return result.value;
   }
 
   async findByUser(userId: number): Promise<Project[]> {
@@ -182,5 +196,40 @@ export class ProjectsService {
       totalSprints: sprintCount.value,
       completedSprints: completedSprintCount.value,
     };
+  }
+
+  // Get project activities/history
+  async getProjectActivities(projectId: number, limit: number = 50) {
+    await this.findOne(projectId); // Check if project exists
+
+    // Get task history for this project
+    const activities = await this.db
+      .select({
+        id: taskHistory.id,
+        type: taskHistory.changeType,
+        fieldName: taskHistory.fieldName,
+        oldValue: taskHistory.oldValue,
+        newValue: taskHistory.newValue,
+        createdAt: taskHistory.createdAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          avatarUrl: users.avatarUrl,
+        },
+        task: {
+          id: tasks.id,
+          title: tasks.title,
+          taskKey: tasks.taskKey,
+        },
+      })
+      .from(taskHistory)
+      .innerJoin(tasks, eq(taskHistory.taskId, tasks.id))
+      .innerJoin(users, eq(taskHistory.userId, users.id))
+      .where(eq(tasks.projectId, projectId))
+      .orderBy(desc(taskHistory.createdAt))
+      .limit(limit);
+
+    return activities;
   }
 }
