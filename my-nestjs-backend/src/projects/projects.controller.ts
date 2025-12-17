@@ -33,6 +33,17 @@ export class ProjectsController {
     return this.projectsService.create(createProjectDto, ownerId);
   }
 
+  @Get('search')
+  searchProjects(@Query('name') name: string) {
+    return this.projectsService.searchByName(name);
+  }
+
+  @Get('count')
+  async getCount() {
+    const count = await this.projectsService.getProjectCount();
+    return { count };
+  }
+
   @Get()
   findAll(@Query('userId', ParseIntPipe) userId?: number) {
     if (userId) {
@@ -67,6 +78,14 @@ export class ProjectsController {
   @Get(':id/details')
   async getProjectDetails(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.getProjectDetails(id);
+  }
+
+  @Get(':id/activities')
+  async getProjectActivities(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit', ParseIntPipe) limit: number = 50,
+  ) {
+    return this.projectsService.getProjectActivities(id, limit);
   }
 
   @Get(':id/role')

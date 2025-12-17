@@ -135,6 +135,31 @@ export class SprintsService {
     return updated;
   }
 
+  async cancelSprint(id: number, userId: number): Promise<Sprint> {
+    const sprint = await this.findOne(id);
+
+    if (sprint.status === 'completed') {
+      throw new BadRequestException('Không thể cancel sprint đã hoàn thành');
+    }
+
+    if (sprint.status === 'cancelled') {
+      throw new BadRequestException('Sprint đã bị cancel rồi');
+    }
+
+    const canCancel = await this.checkPermission(sprint.projectId, userId, ['admin']);
+    if (!canCancel) {
+      throw new ForbiddenException('Chỉ admin mới có quyền cancel sprint');
+    }
+
+    const [updated] = await this.db
+      .update(sprints)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(sprints.id, id))
+      .returning();
+
+    return updated;
+  }
+
   // Sprint Comments
   async createComment(createCommentDto: CreateSprintCommentDto, userId: number): Promise<SprintComment> {
     const sprint = await this.findOne(createCommentDto.sprintId);
