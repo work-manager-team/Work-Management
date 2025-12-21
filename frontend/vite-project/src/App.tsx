@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import LoginPage from './components/LoginPage'
-import JiraDashboard from './components/JiraDashboard'
-import ProjectsPage from './components/ProjectsPage'
-import MembersPage from './components/MembersPage'
+import LoginPage from './pages/auth/LoginPage'
+import JiraDashboard from './pages/dashboard/JiraDashboard'
+import ProjectsPage from './pages/projects/ProjectsPage'
+import MembersPage from './pages/members/MembersPage'
 type Page = 'dashboard' | 'projects' | 'members';
 
 function App() {
