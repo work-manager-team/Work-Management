@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Calendar, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Project } from '../../../models/Project';
 import './projectCard.css';
 
@@ -10,7 +10,7 @@ interface ProjectCardProps {
 
 const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   const handleQuickLinksClick = (e: React.MouseEvent, link: string) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     console.log('Navigate to:', link);
   };
 
@@ -18,44 +18,29 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
     <div className="project-card" onClick={onClick}>
       {/* Project Header */}
       <div className="project-card-header">
-        <div className="project-icon">
-          {project.avatar ? (
-            <img src={project.avatar} alt={project.name} />
-          ) : (
-            <span>{project.name.charAt(0).toUpperCase()}</span>
-          )}
-        </div>
+        
         <div className="project-info">
           <h3 className="project-name">{project.name}</h3>
-          <p className="project-type">{project.type || 'Team-managed software'}</p>
+          <p className="project-type">{project.key || 'Team-managed software'}</p>
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="project-quick-links">
-        <h4 className="quick-links-title">Quick links</h4>
-        
-        <button 
-          className="quick-link"
-          onClick={(e) => handleQuickLinksClick(e, 'open-work')}
-        >
-          <span>My open work items</span>
-          <span className="quick-link-count">{project.openWorkItems || 0}</span>
-        </button>
+      {/* Status Badge */}
+      {project.status && (
+        <div className="project-status-badge">
+          <span className={`status-dot status-${project.status.toLowerCase()}`}></span>
+          <span className="status-text">{project.status}</span>
+        </div>
+      )}
 
-        <button 
-          className="quick-link"
-          onClick={(e) => handleQuickLinksClick(e, 'done-work')}
-        >
-          <span>Done work items</span>
-        </button>
-      </div>
+      {/* Description Tooltip - Show on hover */}
+      {project.description && (
+        <div className="project-description-tooltip">
+          <p>{project.description}</p>
+        </div>
+      )}
 
-      {/* Boards Dropdown */}
-      <button className="project-boards-dropdown">
-        <span>{project.boardsCount || 1} board</span>
-        <ChevronDown size={16} />
-      </button>
+      
     </div>
   );
 };

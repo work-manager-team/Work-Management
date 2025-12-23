@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 
 // Import components
 import ProjectCard from './components/ProjectCard';
 import RecentWorkItems from './components/RecentWorkItems';
+import ProjectsModal from './components/ProjectsModal';
 
 // Import services
 import projectService from '../../services/user/project.service';
@@ -22,8 +23,9 @@ const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllProjects, setShowAllProjects] = useState(false);
 
-  // Get current user ID (từ auth context hoặc localStorage)
+  // Get current user ID
   const currentUserId = localStorage.getItem('userId') || '1';
 
   // Fetch projects on mount
@@ -38,7 +40,8 @@ const Dashboard: React.FC = () => {
     try {
       // Call API: GET /projects?userId=1
       const response = await projectService.getUserProjects(currentUserId);
-      setProjects(response.data || []);
+      const projectsData = Array.isArray(response) ? response : (response.data || []);
+      setProjects(projectsData);
     } catch (err: any) {
       console.error('Error fetching projects:', err);
       setError(err.message || 'Failed to load projects');
@@ -49,7 +52,11 @@ const Dashboard: React.FC = () => {
 
   // Handlers
   const handleViewAllProjects = () => {
-    navigate('/projects');
+    setShowAllProjects(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAllProjects(false);
   };
 
   const handleProjectClick = (projectId: string) => {
@@ -101,7 +108,7 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Projects Grid */}
+        {/* Projects Grid - 3 columns */}
         {!loading && !error && (
           <>
             {displayedProjects.length > 0 ? (
@@ -136,18 +143,17 @@ const Dashboard: React.FC = () => {
       <section className="work-items-section">
         <RecentWorkItems userId={currentUserId} />
       </section>
-      
-      
+
+      {/* All Projects Modal */}
+      {showAllProjects && (
+        <ProjectsModal
+          projects={projects}
+          onClose={handleCloseModal}
+          onProjectClick={handleProjectClick}
+        />
+      )}
     </div>
   );
 };
 
 export default Dashboard;
-/*
-{/* Kanban Preview (Optional) *
-      {displayedProjects.length > 0 && (
-        <section className="board-preview-section">
-          <KanbanPreview projectId={displayedProjects[0].id} />
-        </section>
-      )}
-*/

@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '../api/endpoints';
 import { ApiResponse, PaginatedResponse } from '../api/types';
 import { getErrorMessage } from '../api/helpers';
 import { Project } from '../../models/Project';
-
+import axios from 'axios';
 class ProjectService {
   /**
    * Get projects by user ID
@@ -16,6 +16,7 @@ class ProjectService {
           params: { userId }
         }
       );
+      //const response = await axios.get("http://localhost:3000/projects?userId=1");
       
       return response.data;
     } catch (error) {

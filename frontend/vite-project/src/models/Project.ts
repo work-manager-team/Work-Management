@@ -10,12 +10,12 @@ export interface Project {
   id: string;
   name: string;
   key: string;
-  description?: string;
-  type?: string;
-  avatar?: string;
-  openWorkItems?: number;
-  boardsCount?: number;
-  members?: ProjectMember[];
+  description: string;
+  ownerId: string;
+  status: string;
+  visibility: string;
+  startDate: Date;
+  endDate: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -25,12 +25,12 @@ export class ProjectModel implements Project {
     public id: string,
     public name: string,
     public key: string,
-    public description?: string,
-    public type?: string,
-    public avatar?: string,
-    public openWorkItems?: number,
-    public boardsCount?: number,
-    public members?: ProjectMember[],
+    public description: string,
+    public ownerId: string,
+    public status: string,
+    public visibility: string,
+    public startDate: Date,
+    public endDate: Date,
     public createdAt?: Date,
     public updatedAt?: Date
   ) {}
@@ -42,15 +42,5 @@ export class ProjectModel implements Project {
       .map(word => word.charAt(0).toUpperCase())
       .slice(0, 2)
       .join('');
-  }
-
-  // Check if user is member
-  isMember(userId: string): boolean {
-    return this.members?.some(member => member.id === userId) || false;
-  }
-
-  // Get member by ID
-  getMember(userId: string): ProjectMember | undefined {
-    return this.members?.find(member => member.id === userId);
   }
 }

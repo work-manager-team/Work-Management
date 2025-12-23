@@ -23,7 +23,7 @@ axiosInstance.interceptors.request.use(
 
     // Log request in development
     if (import.meta.env.DEV) {
-      console.log('🚀 API Request:', {
+      console.log('API Request:', {
         method: config.method?.toUpperCase(),
         url: config.url,
         params: config.params,
@@ -34,7 +34,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    console.error('❌ Request Error:', error);
+    console.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
