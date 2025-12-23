@@ -1,114 +1,153 @@
-// pages/dashboard/Dashboard.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Star, Users, MoreHorizontal } from 'lucide-react';
+import { Plus, Users, ChevronRight } from 'lucide-react';
 
 // Import components
-/*
-import KanbanBoard from './components/KanbanBoard';
-import PopularTemplates from './components/PopularTemplates';
-import WorkspaceInfo from './components/WorkspaceInfo';
-import CreateBoardButton from './components/CreateBoardButton';
-*/
+import ProjectCard from './components/ProjectCard';
+import RecentWorkItems from './components/RecentWorkItems';
+
+// Import services
+import projectService from '../../services/user/project.service';
+
 // Import types
-import { Column } from '../../models/Board';
+import { Project } from '../../models/Project';
 
 // Import styles
 import './dashboard.css';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  
+  // State
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // State management
-  const [columns, setColumns] = useState<Column[]>([
-    {
-      id: 'todo',
-      title: 'To Do',
-      cards: [{ id: '1', title: 'Redesign Trello dashboard' }]
-    },
-    {
-      id: 'doing',
-      title: 'Doing',
-      cards: [{ id: '2', title: 'Redesigning Trello dashboard' }]
-    },
-    {
-      id: 'done',
-      title: 'Done',
-      cards: [{ id: '3', title: 'Redesigned Trello dashboard' }]
+  // Get current user ID (từ auth context hoặc localStorage)
+  const currentUserId = localStorage.getItem('userId') || '1';
+
+  // Fetch projects on mount
+  useEffect(() => {
+    fetchUserProjects();
+  }, [currentUserId]);
+
+  const fetchUserProjects = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Call API: GET /projects?userId=1
+      const response = await projectService.getUserProjects(currentUserId);
+      setProjects(response.data || []);
+    } catch (err: any) {
+      console.error('Error fetching projects:', err);
+      setError(err.message || 'Failed to load projects');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   // Handlers
-  const handleCreateBoard = () => {
-    console.log('Create new board');
-    // TODO: Open create board modal
+  const handleViewAllProjects = () => {
+    navigate('/projects');
   };
 
-  const handleInviteMembers = () => {
-    console.log('Invite members');
-    // TODO: Open invite members modal
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/project/${projectId}/board`);
   };
 
-  const handleAddCard = (columnId: string) => {
-    console.log('Add card to column:', columnId);
-    // TODO: Implement add card logic
+  const handleCreateProject = () => {
+    navigate('/projects/create');
   };
 
-  const handleAddColumn = () => {
-    console.log('Add new column');
-    // TODO: Implement add column logic
-  };
+  // Limit to 3 projects for dashboard display
+  const displayedProjects = projects.slice(0, 3);
 
   return (
     <div className="dashboard-container">
-      {/* Create Board Button */}
-      <CreateBoardButton onClick={handleCreateBoard} />
+      {/* Header */}
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">For you</h1>
+      </div>
 
-      {/* Invite Members Button */}
-      <button 
-        onClick={handleInviteMembers}
-        className="invite-button"
-      >
-        <Users size={18} />
-        <span>Invite Workspace members</span>
-      </button>
-
-      {/* Board Section */}
-      <section className="board-section">
-        <h2 className="section-title">My Board</h2>
-        
-        {/* Board Controls */}
-        <div className="board-controls">
-          <span className="board-name">My Design</span>
-          <button className="icon-button">
-            <Star size={18} />
-          </button>
-          <button className="icon-button">
-            <Users size={18} />
-          </button>
-          <button className="board-dropdown-button">
-            <span>Board</span>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M4 6l4 4 4-4z"/>
-            </svg>
+      {/* Your Spaces Section */}
+      <section className="spaces-section">
+        <div className="section-header">
+          <h2 className="section-title">Recent spaces</h2>
+          <button 
+            onClick={handleViewAllProjects}
+            className="view-all-button"
+          >
+            View all spaces
+            <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Kanban Board */}
-        <KanbanBoard
-          columns={columns}
-          onAddCard={handleAddCard}
-          onAddColumn={handleAddColumn}
-        />
+        {/* Loading State */}
+        {loading && (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading your spaces...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="error-container">
+            <p className="error-message">{error}</p>
+            <button onClick={fetchUserProjects} className="retry-button">
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Projects Grid */}
+        {!loading && !error && (
+          <>
+            {displayedProjects.length > 0 ? (
+              <div className="projects-grid">
+                {displayedProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onClick={() => handleProjectClick(project.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">📁</div>
+                <h3>No spaces yet</h3>
+                <p>Create your first project to get started</p>
+                <button 
+                  onClick={handleCreateProject}
+                  className="create-project-button"
+                >
+                  <Plus size={18} />
+                  Create Project
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </section>
 
-      {/* Popular Templates Section */}
-      <PopularTemplates />
-
-      {/* Workspace Info */}
-      <WorkspaceInfo />
+      {/* Work Items Tabs */}
+      <section className="work-items-section">
+        <RecentWorkItems userId={currentUserId} />
+      </section>
+      
+      
     </div>
   );
 };
 
 export default Dashboard;
+/*
+{/* Kanban Preview (Optional) *
+      {displayedProjects.length > 0 && (
+        <section className="board-preview-section">
+          <KanbanPreview projectId={displayedProjects[0].id} />
+        </section>
+      )}
+*/
