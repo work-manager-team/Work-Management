@@ -331,18 +331,22 @@ GET /tasks?sprintId=1
 ```http
 GET /tasks/:id
 ```
+### 4. Get task by UserId
+'''http
+GET /tasks/assignee/:Userid
 
-### 4. Get Subtasks
+http://localhost:3000/tasks/assignee/2
+### 5. Get Subtasks
 ```http
 GET /tasks/:id/subtasks
 ```
 
-### 5. Update Task
+### 6. Update Task
 ```http
 PUT /tasks/:id
 ```
 
-### 6. Update Task Status
+### 7. Update Task Status
 ```http
 PATCH /tasks/:id/status
 ```

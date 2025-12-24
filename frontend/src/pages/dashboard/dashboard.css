@@ -10,13 +10,17 @@
 
 .dashboard-header {
   margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .dashboard-title {
-  font-size: 2rem;
+  font-size: 32px;
   font-weight: 700;
-  color: #1f2937;
+  color: #111827;
   margin: 0;
+  
 }
 
 /* Spaces Section */

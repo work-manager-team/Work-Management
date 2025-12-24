@@ -53,6 +53,13 @@ export class TasksController {
     return this.tasksService.findAll();
   }
 
+  @Get('assignee/:assigneeId')
+  findByAssignee(@Param('assigneeId', ParseIntPipe) assigneeId: number) {
+    // TODO: Get userId from JWT token
+    const userId = 2;
+    return this.tasksService.findByAssignee(assigneeId, userId);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     // TODO: Get userId from JWT token

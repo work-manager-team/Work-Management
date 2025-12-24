@@ -9,12 +9,22 @@ import ProjectsModal from './components/ProjectsModal';
 
 // Import services
 import projectService from '../../services/user/project.service';
+import taskService from '../../services/user/task.service';
 
 // Import types
 import { Project } from '../../models/Project';
 
 // Import styles
 import './dashboard.css';
+
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  projectId: string;
+  projectName?: string;
+}
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -26,7 +36,7 @@ const Dashboard: React.FC = () => {
   const [showAllProjects, setShowAllProjects] = useState(false);
 
   // Get current user ID
-  const currentUserId = localStorage.getItem('userId') || '1';
+  const currentUserId = localStorage.getItem('userId') || '2';
 
   // Fetch projects on mount
   useEffect(() => {
@@ -38,7 +48,6 @@ const Dashboard: React.FC = () => {
     setError(null);
     
     try {
-      // Call API: GET /projects?userId=1
       const response = await projectService.getUserProjects(currentUserId);
       const projectsData = Array.isArray(response) ? response : (response.data || []);
       setProjects(projectsData);
@@ -47,6 +56,32 @@ const Dashboard: React.FC = () => {
       setError(err.message || 'Failed to load projects');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch assigned tasks for current user
+  const fetchAssignedTasks = async (): Promise<Task[]> => {
+    try {
+      // Call API: GET /tasks/assignee/:userId
+      const tasksData = await taskService.getAssignedTasks(currentUserId);
+      
+      // Transform API response to match modal format
+      const formattedTasks = tasksData.map((task: any) => ({
+        id: task.id?.toString() || '',
+        title: task.title || 'Untitled Task',
+        description: task.description || '',
+        status: task.status || 'todo',
+        projectId: task.projectId?.toString() || '',
+        projectName: '', // Có thể fetch project name nếu cần
+        priority: task.priority || '',
+        type: task.type || '',
+        dueDate: task.dueDate || null
+      }));
+
+      return formattedTasks;
+    } catch (err: any) {
+      console.error('Error fetching assigned tasks:', err);
+      return [];
     }
   };
 
@@ -141,7 +176,10 @@ const Dashboard: React.FC = () => {
 
       {/* Work Items Tabs */}
       <section className="work-items-section">
-        <RecentWorkItems userId={currentUserId} />
+        <RecentWorkItems 
+          userId={currentUserId}
+          onViewAssignedTasks={fetchAssignedTasks}
+        />
       </section>
 
       {/* All Projects Modal */}
