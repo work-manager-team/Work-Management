@@ -1,118 +1,150 @@
-import axiosInstance from '../api/axios.config';
-import { API_ENDPOINTS } from '../api/endpoints';
-import { ApiResponse, PaginatedResponse } from '../api/types';
-import { getErrorMessage } from '../api/helpers';
-import { Project } from '../../models/Project';
-import axios from 'axios';
+// src/services/project.service.ts
+
+const API_BASE_URL =  'http://localhost:3000';
+
+export interface Project {
+  id: number;
+  name: string;
+  key: string;
+  description: string;
+  ownerId: number;
+  status: string;
+  visibility: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectDetails extends Project {
+  memberCount: number;
+  totalSprints: number;
+  completedSprints: number;
+}
+
+export interface ProjectMember {
+  userId: number;
+  projectId: number;
+  role: string;
+  status: string;
+  invitedBy: number;
+  joinedAt: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  avatarUrl?: string;
+}
+
 class ProjectService {
   /**
-   * Get projects by user ID
+   * Get all projects for a user
    */
-  async getUserProjects(userId: string): Promise<ApiResponse<Project[]>> {
+  async getUserProjects(userId: string | number): Promise<Project[]> {
     try {
-      const response = await axiosInstance.get<ApiResponse<Project[]>>(
-        API_ENDPOINTS.PROJECTS.BASE,
+      const response = await fetch(
+        `${API_BASE_URL}/projects?userId=${userId}`,
         {
-          params: { userId }
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
       );
-      //const response = await axios.get("http://localhost:3000/projects?userId=1");
-      
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error('Error fetching user projects:', errorMessage);
-      throw new Error(errorMessage);
+      console.error('Error in getUserProjects:', error);
+      throw error;
     }
   }
 
   /**
-   * Get single project by ID
+   * Get project details by ID
    */
-  async getProjectById(projectId: string): Promise<ApiResponse<Project>> {
+  async getProjectDetails(projectId: string | number): Promise<ProjectDetails> {
     try {
-      const response = await axiosInstance.get<ApiResponse<Project>>(
-        API_ENDPOINTS.PROJECTS.BY_ID(projectId)
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}/details`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
-      
-      return response.data;
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error('Error fetching project:', errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
 
-  /**
-   * Create new project
-   */
-  async createProject(projectData: Partial<Project>): Promise<ApiResponse<Project>> {
-    try {
-      const response = await axiosInstance.post<ApiResponse<Project>>(
-        API_ENDPOINTS.PROJECTS.BASE,
-        projectData
-      );
-      
-      return response.data;
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error('Error creating project:', errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch project details: ${response.statusText}`);
+      }
 
-  /**
-   * Update project
-   */
-  async updateProject(
-    projectId: string, 
-    updateData: Partial<Project>
-  ): Promise<ApiResponse<Project>> {
-    try {
-      const response = await axiosInstance.put<ApiResponse<Project>>(
-        API_ENDPOINTS.PROJECTS.BY_ID(projectId),
-        updateData
-      );
-      
-      return response.data;
+      const data = await response.json();
+      return data;
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error('Error updating project:', errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
-
-  /**
-   * Delete project
-   */
-  async deleteProject(projectId: string): Promise<ApiResponse<void>> {
-    try {
-      const response = await axiosInstance.delete<ApiResponse<void>>(
-        API_ENDPOINTS.PROJECTS.BY_ID(projectId)
-      );
-      
-      return response.data;
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error('Error deleting project:', errorMessage);
-      throw new Error(errorMessage);
+      console.error('Error in getProjectDetails:', error);
+      throw error;
     }
   }
 
   /**
    * Get project members
    */
-  async getProjectMembers(projectId: string): Promise<ApiResponse<any[]>> {
+  async getProjectMembers(projectId: string | number): Promise<ProjectMember[]> {
     try {
-      const response = await axiosInstance.get<ApiResponse<any[]>>(
-        API_ENDPOINTS.PROJECTS.MEMBERS(projectId)
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}/members`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
-      
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch project members: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      console.error('Error fetching project members:', errorMessage);
-      throw new Error(errorMessage);
+      console.error('Error in getProjectMembers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user details by ID
+   */
+  async getUserById(userId: string | number): Promise<User> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/users/${userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserById:', error);
+      throw error;
     }
   }
 }

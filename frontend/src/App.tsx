@@ -6,6 +6,7 @@ import LoginPage from './pages/auth/LoginPage'
 //import Register from './pages/auth/Register'
 import Dashboard from './pages/dashboard/Dashboard'
 import ProjectsPage from './pages/projects/ProjectsPage'
+import ProjectDetailsPage from './pages/projects/ProjectDetailsPage';
 import MembersPage from './pages/members/MembersPage'
 //import Calendar from './pages/calendar/Calendar';
 //import Table from './pages/table/Table';
@@ -48,6 +49,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
           <Route path="/reports" element={<div>Reports Page</div>} />
           <Route path="/notifications" element={<div>Notifications Page</div>} />
           <Route path="/settings" element={<div>Settings Page</div>} />
