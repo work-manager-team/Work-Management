@@ -3,18 +3,18 @@ import { Loader, ChevronDown, X } from 'lucide-react';
 import Layout from './Layout';
 
 interface Project {
-    id: number;
+    id: string;
     name: string;
     [key: string]: any;
 }
 
 interface Sprint {
-    id: number;
-    projectId: number;
+    id: string;
+    projectId: string;
     name: string;
     startDate: string;
     endDate: string;
-    status: string;
+    status: 'planned' | 'active' | 'completed' | 'cancelled';
     [key: string]: any;
 }
 
@@ -25,13 +25,14 @@ interface CalendarPageProps {
 const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [projects, setProjects] = useState<Project[]>([]);
-    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [sprints, setSprints] = useState<Sprint[]>([]);
     const [loading, setLoading] = useState(true);
     const [sprintsLoading, setSprintsLoading] = useState(false);
     const [showProjectDropdown, setShowProjectDropdown] = useState(false);
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
     const [selectedDaySprintss, setSelectedDaySprintss] = useState<Sprint[]>([]);
+    const [updatingSprintId, setUpdatingSprintId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchProjects();
@@ -62,8 +63,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
 
             // Auto-select first project
             if (data.length > 0) {
-                setSelectedProjectId(data[0].id);
-                fetchSprints(data[0].id);
+                setSelectedProjectId(String(data[0].id));
+                fetchSprints(String(data[0].id));
             }
         } catch (err) {
             console.error('Error fetching projects:', err);
@@ -72,7 +73,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
         }
     };
 
-    const fetchSprints = async (projectId: number) => {
+    const fetchSprints = async (projectId: string) => {
         try {
             setSprintsLoading(true);
             const response = await fetch(
@@ -93,7 +94,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
         }
     };
 
-    const handleProjectChange = (projectId: number) => {
+    const handleProjectChange = (projectId: string) => {
         setSelectedProjectId(projectId);
         setShowProjectDropdown(false);
         fetchSprints(projectId);
@@ -163,6 +164,41 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
 
     const handleNextMonth = () => {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+    };
+
+    const updateSprintStatus = async (sprintId: string, newStatus: 'planned' | 'active' | 'completed' | 'cancelled') => {
+        try {
+            setUpdatingSprintId(sprintId);
+            const response = await fetch(`https://work-management-chi.vercel.app/sprints/${sprintId}/${newStatus}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update sprint status');
+            }
+
+            // Update local state
+            const updatedSprints = sprints.map(sprint =>
+                sprint.id === sprintId ? { ...sprint, status: newStatus } : sprint
+            );
+            setSprints(updatedSprints);
+
+            // Update selected day sprints
+            const updatedSelectedSprints = selectedDaySprintss.map(sprint =>
+                sprint.id === sprintId ? { ...sprint, status: newStatus } : sprint
+            );
+            setSelectedDaySprintss(updatedSelectedSprints);
+
+            console.log('Sprint status updated:', sprintId, newStatus);
+        } catch (error) {
+            console.error('Error updating sprint status:', error);
+            alert('Failed to update sprint status');
+        } finally {
+            setUpdatingSprintId(null);
+        }
     };
 
     return (
@@ -327,8 +363,19 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
                                             <strong>End:</strong> {new Date(sprint.endDate).toLocaleDateString()}
                                         </p>
                                         <p>
-                                            <strong>Status:</strong> <span className="capitalize">{sprint.status}</span>
+                                            <strong>Status:</strong>
                                         </p>
+                                        <select
+                                            value={sprint.status}
+                                            onChange={(e) => updateSprintStatus(sprint.id, e.target.value as 'planned' | 'active' | 'completed' | 'cancelled')}
+                                            disabled={updatingSprintId === sprint.id}
+                                            className="w-full mt-1 px-2 py-1 border border-cyan-300 rounded bg-white text-cyan-900 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="planned">Planned</option>
+                                            <option value="active">Active</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
                                     </div>
                                 </div>
                             ))}

@@ -1,6 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, Clock } from 'lucide-react';
 import Layout from './Layout';
+
+interface ProjectDetail {
+    id: string | number;
+    name: string;
+    key: string;
+    description: string;
+    ownerId: number;
+    status: string;
+    visibility: string;
+    startDate: string;
+    endDate: string;
+    createdAt: string;
+    updatedAt: string;
+    memberCount: number;
+    totalSprints: number;
+    completedSprints: number;
+}
 
 interface ReportsPageProps {
     onLogout: () => void;
@@ -8,33 +25,68 @@ interface ReportsPageProps {
 
 const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
     const [reportType, setReportType] = useState('summary');
+    const [projects, setProjects] = useState<ProjectDetail[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [totalStats, setTotalStats] = useState({
+        totalProjects: 0,
+        activeProjects: 0,
+        totalMembers: 0,
+        totalSprints: 0,
+        completedSprints: 0
+    });
 
-    const reports = [
-        {
-            id: 1,
-            title: 'Project Overview',
-            tasks: 45,
-            completed: 32,
-            progress: 71,
-            team: 8
-        },
-        {
-            id: 2,
-            title: 'Team Performance',
-            tasks: 28,
-            completed: 24,
-            progress: 86,
-            team: 5
-        },
-        {
-            id: 3,
-            title: 'Design Sprint',
-            tasks: 15,
-            completed: 10,
-            progress: 67,
-            team: 3
+    // Fetch projects on component mount
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
+    const fetchProjects = async () => {
+        try {
+            setLoading(true);
+            const user = localStorage.getItem('user');
+            const userId = user ? JSON.parse(user).id : null;
+
+            if (!userId) {
+                console.error('User ID not found in localStorage');
+                return;
+            }
+
+            // First, get all projects
+            const projectsResponse = await fetch(`http://work-management-chi.vercel.app/projects?userId=${userId}`);
+            const projectsData = await projectsResponse.json();
+            const projectsList = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
+
+            // Then fetch details for each project
+            const projectDetailsPromises = projectsList.map((project: any) =>
+                fetch(`http://work-management-chi.vercel.app/projects/${project.id}/details`)
+                    .then(res => res.json())
+                    .catch(err => {
+                        console.error('Error fetching project details:', err);
+                        return null;
+                    })
+            );
+
+            const projectDetails = await Promise.all(projectDetailsPromises);
+            const validProjects = projectDetails.filter(p => p !== null) as ProjectDetail[];
+
+            setProjects(validProjects);
+
+            // Calculate totals
+            const stats = {
+                totalProjects: validProjects.length,
+                activeProjects: validProjects.filter(p => p.status === 'active').length,
+                totalMembers: validProjects.reduce((sum, p) => sum + (p.memberCount || 0), 0),
+                totalSprints: validProjects.reduce((sum, p) => sum + (p.totalSprints || 0), 0),
+                completedSprints: validProjects.reduce((sum, p) => sum + (p.completedSprints || 0), 0)
+            };
+            setTotalStats(stats);
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            setProjects([]);
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
     return (
         <Layout onLogout={onLogout}>
@@ -47,8 +99,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                         <button
                             onClick={() => setReportType('summary')}
                             className={`px-6 py-2 rounded font-medium transition ${reportType === 'summary'
-                                    ? 'bg-purple-500 text-white'
-                                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                                 }`}
                         >
                             Summary
@@ -56,8 +108,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                         <button
                             onClick={() => setReportType('detailed')}
                             className={`px-6 py-2 rounded font-medium transition ${reportType === 'detailed'
-                                    ? 'bg-purple-500 text-white'
-                                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                                 }`}
                         >
                             Detailed
@@ -65,8 +117,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                         <button
                             onClick={() => setReportType('analytics')}
                             className={`px-6 py-2 rounded font-medium transition ${reportType === 'analytics'
-                                    ? 'bg-purple-500 text-white'
-                                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                                 }`}
                         >
                             Analytics
@@ -79,8 +131,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Total Tasks</p>
-                                <p className="text-3xl font-bold text-gray-800">127</p>
+                                <p className="text-sm text-gray-600">Total Projects</p>
+                                <p className="text-3xl font-bold text-gray-800">{totalStats.totalProjects}</p>
                             </div>
                             <BarChart3 size={32} className="text-purple-500" />
                         </div>
@@ -89,8 +141,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Completed</p>
-                                <p className="text-3xl font-bold text-green-600">85</p>
+                                <p className="text-sm text-gray-600">Active Projects</p>
+                                <p className="text-3xl font-bold text-green-600">{totalStats.activeProjects}</p>
                             </div>
                             <TrendingUp size={32} className="text-green-500" />
                         </div>
@@ -99,8 +151,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">In Progress</p>
-                                <p className="text-3xl font-bold text-blue-600">32</p>
+                                <p className="text-sm text-gray-600">Total Sprints</p>
+                                <p className="text-3xl font-bold text-blue-600">{totalStats.totalSprints}</p>
                             </div>
                             <Clock size={32} className="text-blue-500" />
                         </div>
@@ -110,7 +162,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Team Members</p>
-                                <p className="text-3xl font-bold text-orange-600">12</p>
+                                <p className="text-3xl font-bold text-orange-600">{totalStats.totalMembers}</p>
                             </div>
                             <Users size={32} className="text-orange-500" />
                         </div>
@@ -119,40 +171,67 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
 
                 {/* Reports List */}
                 <div className="bg-white rounded-lg shadow-lg p-6">
-                    <h2 className="text-xl font-semibold mb-4 text-gray-800">Project Reports</h2>
+                    <h2 className="text-xl font-semibold mb-4 text-gray-800">Project Details</h2>
 
-                    <div className="space-y-4">
-                        {reports.map((report) => (
-                            <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-lg font-semibold text-gray-800">{report.title}</h3>
-                                    <span className="text-sm text-gray-600">{report.progress}% Complete</span>
-                                </div>
+                    {loading ? (
+                        <div className="text-center py-8 text-gray-500">Loading projects...</div>
+                    ) : projects.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">No projects found</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {projects.map((project) => {
+                                const sprintProgress = project.totalSprints > 0
+                                    ? Math.round((project.completedSprints / project.totalSprints) * 100)
+                                    : 0;
 
-                                <div className="grid grid-cols-3 gap-4 mb-3">
-                                    <div>
-                                        <p className="text-sm text-gray-600">Total Tasks</p>
-                                        <p className="text-xl font-bold text-gray-800">{report.tasks}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Completed</p>
-                                        <p className="text-xl font-bold text-green-600">{report.completed}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Team Size</p>
-                                        <p className="text-xl font-bold text-blue-600">{report.team}</p>
-                                    </div>
-                                </div>
+                                return (
+                                    <div key={project.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-gray-800">{project.name}</h3>
+                                                <p className="text-sm text-gray-600">{project.description}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${project.status === 'active'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-gray-100 text-gray-800'
+                                                    }`}>
+                                                    {project.status}
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                        className="bg-purple-500 h-2 rounded-full transition-all"
-                                        style={{ width: `${report.progress}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                                        <div className="grid grid-cols-4 gap-4 mb-3">
+                                            <div>
+                                                <p className="text-sm text-gray-600">Total Sprints</p>
+                                                <p className="text-xl font-bold text-gray-800">{project.totalSprints}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Completed Sprints</p>
+                                                <p className="text-xl font-bold text-green-600">{project.completedSprints}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Team Members</p>
+                                                <p className="text-xl font-bold text-blue-600">{project.memberCount}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Key</p>
+                                                <p className="text-xl font-bold text-purple-600">{project.key}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                                className="bg-purple-500 h-2 rounded-full transition-all"
+                                                style={{ width: `${sprintProgress}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">{sprintProgress}% sprints completed</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         </Layout>
