@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận thay đổi email</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #9B59B6;
+            margin: 0;
+        }
+        .content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #9B59B6;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #8E44AD;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        .info {
+            background-color: #E8F5E9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 {{appName}}</h1>
+        </div>
+
+        <div class="content">
+            <h2>Xin chào {{name}}!</h2>
+
+            <p>Bạn đã yêu cầu thay đổi địa chỉ email cho tài khoản của mình tại <strong>{{appName}}</strong>.</p>
+
+            <div class="info">
+                <p><strong>✉️ Email mới:</strong> {{newEmail}}</p>
+            </div>
+
+            <p>Để xác nhận và hoàn tất thay đổi email, vui lòng click vào nút bên dưới:</p>
+
+            <div style="text-align: center;">
+                <a href="{{verificationLink}}" class="button">Xác Nhận Thay Đổi</a>
+            </div>
+
+            <p><strong>⏰ Lưu ý:</strong> Link xác nhận này sẽ hết hạn sau <strong>3 giờ</strong>.</p>
+
+            <p>Nếu button không hoạt động, bạn có thể copy và paste link dưới đây vào trình duyệt:</p>
+            <p style="word-break: break-all; color: #9B59B6;">{{verificationLink}}</p>
+
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+            <p style="color: #666; font-size: 14px;">
+                <strong>Bạn không yêu cầu thay đổi email?</strong><br>
+                Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Email của bạn sẽ không bị thay đổi.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Email này được gửi từ <strong>{{appName}}</strong></p>
+            <p>&copy; 2024 {{appName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

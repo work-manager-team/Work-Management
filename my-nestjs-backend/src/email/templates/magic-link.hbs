@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập không cần mật khẩu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #27AE60;
+            margin: 0;
+        }
+        .content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #27AE60;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #229954;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        .warning {
+            background-color: #FFF3CD;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✨ {{appName}}</h1>
+        </div>
+
+        <div class="content">
+            <h2>Xin chào {{name}}!</h2>
+
+            <p>Bạn đã yêu cầu đăng nhập vào <strong>{{appName}}</strong> không cần mật khẩu.</p>
+
+            <p>Click vào nút bên dưới để đăng nhập ngay:</p>
+
+            <div style="text-align: center;">
+                <a href="{{magicLink}}" class="button">🔓 Đăng Nhập Ngay</a>
+            </div>
+
+            <div class="warning">
+                <p><strong>⚠️ Bảo mật quan trọng:</strong></p>
+                <ul style="margin: 10px 0;">
+                    <li>Link này chỉ có hiệu lực trong <strong>15 phút</strong></li>
+                    <li>Chỉ sử dụng được <strong>1 lần</strong></li>
+                    <li><strong>KHÔNG</strong> chia sẻ link này với bất kỳ ai</li>
+                </ul>
+            </div>
+
+            <p>Nếu button không hoạt động, bạn có thể copy và paste link dưới đây vào trình duyệt:</p>
+            <p style="word-break: break-all; color: #27AE60;">{{magicLink}}</p>
+
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+            <p style="color: #666; font-size: 14px;">
+                <strong>Bạn không yêu cầu đăng nhập?</strong><br>
+                Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này và <strong>KHÔNG</strong> click vào link.<br>
+                Ai đó có thể đã nhập nhầm địa chỉ email của bạn.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Email này được gửi từ <strong>{{appName}}</strong></p>
+            <p>&copy; 2024 {{appName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,5 +1,6 @@
 // src/users/users.service.ts
-import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { eq, or, ilike } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import * as bcrypt from 'bcrypt';
@@ -8,12 +9,17 @@ import { users, User } from '../db/schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { AuthService } from '../auth/auth.service';
+import { EmailService } from '../email/email.service';
 import * as schema from '../db/schema';
 
 @Injectable()
 export class UsersService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    private authService: AuthService,
+    private emailService: EmailService,
+    private configService: ConfigService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Omit<User, 'passwordHash'>> {
@@ -32,6 +38,7 @@ export class UsersService {
     // Hash password
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
 
+    // Create user with 'unverified' status
     const [user] = await this.db
       .insert(users)
       .values({
@@ -40,9 +47,32 @@ export class UsersService {
         passwordHash,
         fullName: createUserDto.fullName,
         avatarUrl: createUserDto.avatarUrl,
-        status: createUserDto.status || 'active',
+        status: 'unverified', // Always start as unverified
       })
       .returning();
+
+    // Generate verification token
+    const verificationToken = this.authService.generateToken(
+      user.id,
+      user.email,
+      'email_verification',
+    );
+
+    // Build verification link
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.fullName || user.username,
+        verificationLink,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Don't throw error - user is created, just email failed
+    }
 
     // Remove password from response
     const { passwordHash: _, ...userWithoutPassword } = user;
@@ -163,10 +193,19 @@ export class UsersService {
       return null;
     }
 
+    if (!user.passwordHash) {
+      return null; // User has no password (e.g., passwordless login only)
+    }
+
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
 
     if (!isPasswordValid) {
       return null;
+    }
+
+    // Check if email is verified
+    if (user.status === 'unverified') {
+      throw new UnauthorizedException('Vui lòng xác thực email trước khi đăng nhập. Kiểm tra hộp thư của bạn.');
     }
 
     if (user.status !== 'active') {
@@ -189,6 +228,10 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException(`User với ID ${userId} không tồn tại`);
+    }
+
+    if (!user.passwordHash) {
+      throw new ConflictException('User không có mật khẩu');
     }
 
     // Verify old password
