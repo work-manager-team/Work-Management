@@ -160,6 +160,55 @@ export class SprintsService {
     return updated;
   }
 
+  async updateSprintStatus(
+    id: number,
+    newStatus: 'planned' | 'active' | 'completed' | 'cancelled',
+    userId: number,
+  ): Promise<Sprint> {
+    const sprint = await this.findOne(id);
+
+    // Validate status transitions based on permissions
+    const currentStatus = sprint.status;
+
+    // Check permissions based on transition
+    if (newStatus === 'cancelled') {
+      // Only admin can cancel
+      const canCancel = await this.checkPermission(sprint.projectId, userId, ['admin']);
+      if (!canCancel) {
+        throw new ForbiddenException('Chỉ admin mới có quyền cancel sprint');
+      }
+    } else {
+      // Member or admin can change to other statuses
+      const canUpdate = await this.checkPermission(sprint.projectId, userId, ['member', 'admin']);
+      if (!canUpdate) {
+        throw new ForbiddenException('Bạn không có quyền thay đổi status sprint');
+      }
+    }
+
+    // Business logic validation
+    if (currentStatus === newStatus) {
+      throw new BadRequestException(`Sprint đã ở trạng thái ${newStatus} rồi`);
+    }
+
+    // Prevent certain invalid transitions
+    if (currentStatus === 'completed' && newStatus !== 'completed') {
+      throw new BadRequestException('Không thể thay đổi sprint đã hoàn thành');
+    }
+
+    if (currentStatus === 'cancelled' && newStatus !== 'cancelled') {
+      throw new BadRequestException('Không thể thay đổi sprint đã bị cancel');
+    }
+
+    // Update status
+    const [updated] = await this.db
+      .update(sprints)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(sprints.id, id))
+      .returning();
+
+    return updated;
+  }
+
   // Sprint Comments
   async createComment(createCommentDto: CreateSprintCommentDto, userId: number): Promise<SprintComment> {
     const sprint = await this.findOne(createCommentDto.sprintId);

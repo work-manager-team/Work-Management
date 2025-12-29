@@ -19,7 +19,7 @@ import { relations } from 'drizzle-orm';
 // ============= ENUMS =============
 
 // User status
-export const userStatusEnum = pgEnum('user_status', ['active', 'inactive', 'suspended']);
+export const userStatusEnum = pgEnum('user_status', ['unverified', 'active', 'inactive', 'suspended']);
 
 // Project status
 export const projectStatusEnum = pgEnum('project_status', [
@@ -46,16 +46,12 @@ export const memberStatusEnum = pgEnum('member_status', ['active', 'invited', 'r
 // Task type
 export const taskTypeEnum = pgEnum('task_type', ['task', 'bug', 'story', 'epic', 'subtask']);
 
-// Task status
+// Task status (simplified to 4 statuses)
 export const taskStatusEnum = pgEnum('task_status', [
-  'backlog',
   'todo',
   'in_progress',
-  'in_review',
-  'testing',
-  'blocked',
   'done',
-  'closed',
+  'not_completed',
 ]);
 
 // Task priority
@@ -92,10 +88,11 @@ export const users = pgTable(
     id: bigserial('id', { mode: 'number' }).primaryKey(),
     email: varchar('email', { length: 255 }).notNull().unique(),
     username: varchar('username', { length: 50 }).notNull().unique(),
-    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    passwordHash: varchar('password_hash', { length: 255 }),
     fullName: varchar('full_name', { length: 100 }),
     avatarUrl: varchar('avatar_url', { length: 500 }),
-    status: userStatusEnum('status').notNull().default('active'),
+    status: userStatusEnum('status').notNull().default('unverified'),
+    emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -202,7 +199,7 @@ export const tasks = pgTable(
     title: varchar('title', { length: 500 }).notNull(),
     description: text('description'),
     type: taskTypeEnum('type').notNull().default('task'),
-    status: taskStatusEnum('status').notNull().default('backlog'),
+    status: taskStatusEnum('status').notNull().default('todo'),
     priority: taskPriorityEnum('priority').notNull().default('medium'),
     reporterId: bigint('reporter_id', { mode: 'number' }).references(() => users.id, {
       onDelete: 'set null',

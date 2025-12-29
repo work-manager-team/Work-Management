@@ -3,7 +3,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { DatabaseModule } from './db/database.module';  // ← Import này
+import { DatabaseModule } from './db/database.module';
+import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ProjectMembersModule } from './project-members/project-members.module';
@@ -21,7 +23,9 @@ import { NotificationsModule } from './notifications/notifications.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    DatabaseModule,  // ← Thêm vào đây
+    DatabaseModule,
+    AuthModule,
+    EmailModule,
     UsersModule,
     ProjectsModule,
     ProjectMembersModule,
