@@ -46,16 +46,12 @@ export const memberStatusEnum = pgEnum('member_status', ['active', 'invited', 'r
 // Task type
 export const taskTypeEnum = pgEnum('task_type', ['task', 'bug', 'story', 'epic', 'subtask']);
 
-// Task status
+// Task status (simplified to 4 statuses)
 export const taskStatusEnum = pgEnum('task_status', [
-  'backlog',
   'todo',
   'in_progress',
-  'in_review',
-  'testing',
-  'blocked',
   'done',
-  'closed',
+  'not_completed',
 ]);
 
 // Task priority
@@ -203,7 +199,7 @@ export const tasks = pgTable(
     title: varchar('title', { length: 500 }).notNull(),
     description: text('description'),
     type: taskTypeEnum('type').notNull().default('task'),
-    status: taskStatusEnum('status').notNull().default('backlog'),
+    status: taskStatusEnum('status').notNull().default('todo'),
     priority: taskPriorityEnum('priority').notNull().default('medium'),
     reporterId: bigint('reporter_id', { mode: 'number' }).references(() => users.id, {
       onDelete: 'set null',

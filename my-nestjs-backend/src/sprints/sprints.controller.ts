@@ -78,6 +78,16 @@ export class SprintsController {
     return this.sprintsService.cancelSprint(id, userId);
   }
 
+  @Patch(':id/status')
+  updateSprintStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: 'planned' | 'active' | 'completed' | 'cancelled',
+  ) {
+    // TODO: Get userId from JWT token
+    const userId = 1;
+    return this.sprintsService.updateSprintStatus(id, status, userId);
+  }
+
   // Sprint Comments
   @Post(':id/comments')
   @HttpCode(HttpStatus.CREATED)
