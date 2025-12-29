@@ -31,23 +31,31 @@ export class TasksController {
 
   @Get()
   findAll(
-    @Query('projectId', ParseIntPipe) projectId?: number,
-    @Query('sprintId', ParseIntPipe) sprintId?: number,
-    @Query('assigneeId', ParseIntPipe) assigneeId?: number,
+    @Query('projectId') projectId?: string,
+    @Query('projectID') projectID?: string,
+    @Query('sprintId') sprintId?: string,
+    @Query('sprintID') sprintID?: string,
+    @Query('assigneeId') assigneeId?: string,
+    @Query('assigneeID') assigneeID?: string,
   ) {
     // TODO: Get userId from JWT token
     const userId = 1;
 
-    if (projectId) {
-      return this.tasksService.findByProject(projectId, userId);
+    // Support both camelCase and uppercase ID
+    const finalProjectId = projectId || projectID;
+    const finalSprintId = sprintId || sprintID;
+    const finalAssigneeId = assigneeId || assigneeID;
+
+    if (finalProjectId) {
+      return this.tasksService.findByProject(parseInt(finalProjectId), userId);
     }
 
-    if (sprintId) {
-      return this.tasksService.findBySprint(sprintId, userId);
+    if (finalSprintId) {
+      return this.tasksService.findBySprint(parseInt(finalSprintId), userId);
     }
 
-    if (assigneeId) {
-      return this.tasksService.findByAssignee(assigneeId, userId);
+    if (finalAssigneeId) {
+      return this.tasksService.findByAssignee(parseInt(finalAssigneeId), userId);
     }
 
     return this.tasksService.findAll();
