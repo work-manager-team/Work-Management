@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực email</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #4A90E2;
+            margin: 0;
+        }
+        .content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #4A90E2;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #357ABD;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        .note {
+            background-color: #FFF3CD;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{appName}}</h1>
+        </div>
+
+        <div class="content">
+            <h2>Xin chào {{name}}!</h2>
+
+            <p>Cảm ơn bạn đã đăng ký tài khoản tại <strong>{{appName}}</strong>.</p>
+
+            <p>Để hoàn tất quá trình đăng ký và kích hoạt tài khoản của bạn, vui lòng click vào nút bên dưới để xác thực địa chỉ email:</p>
+
+            <div style="text-align: center;">
+                <a href="{{verificationLink}}" class="button">Xác Thực Email</a>
+            </div>
+
+            <div class="note">
+                <p><strong>⏰ Lưu ý:</strong> Link xác thực này sẽ hết hạn sau <strong>3 giờ</strong>.</p>
+            </div>
+
+            <p>Nếu button không hoạt động, bạn có thể copy và paste link dưới đây vào trình duyệt:</p>
+            <p style="word-break: break-all; color: #4A90E2;">{{verificationLink}}</p>
+
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+            <p style="color: #666; font-size: 14px;">
+                <strong>Bạn không thực hiện hành động này?</strong><br>
+                Nếu bạn không đăng ký tài khoản này, vui lòng bỏ qua email này. Tài khoản sẽ không được kích hoạt nếu không xác thực email.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Email này được gửi từ <strong>{{appName}}</strong></p>
+            <p>&copy; 2024 {{appName}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
