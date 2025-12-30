@@ -3,18 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Users, MoreVertical, ArrowUp, Folder } from 'lucide-react';
 import projectService, { Project, ProjectDetails } from '../../services/user/project.service';
 import ProjectMembersModal from './components/ProjectMembersModal';
-import './ProjectsPage.css';
 
-interface ProjectsPageProps {
-  onLogout: () => void;
-  onNavigate?: (page: string) => void;
-}
 
 interface ProjectWithDetails extends Project {
   memberCount?: number;
 }
 
-const ProjectsPage: React.FC<ProjectsPageProps> = ({ onLogout, onNavigate }) => {
+const ProjectsPage = () => {
   const navigate = useNavigate();
   
   const [projects, setProjects] = useState<ProjectWithDetails[]>([]);
@@ -30,8 +25,7 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ onLogout, onNavigate }) => 
   } | null>(null);
 
   // Get current user ID
-  const currentUserId = localStorage.getItem('userId') || '1';
-
+  const currentUserId = localStorage.getItem('userId') || 1;
   useEffect(() => {
     fetchProjects();
     

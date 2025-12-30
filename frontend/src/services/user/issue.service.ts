@@ -1,6 +1,3 @@
-// ============================================
-// services/user/issue.service.ts
-// ============================================
 import axiosInstance from '../api/axios.config';
 import { API_ENDPOINTS } from '../api/endpoints';
 import { ApiResponse, PaginatedResponse } from '../api/types';

@@ -1,25 +1,67 @@
 import React, { useState } from 'react';
-import { Facebook, MessageCircle } from 'lucide-react';
+import { Facebook, MessageCircle, Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import userAuthService from '../../services/user/auth.service';
+//import './LoginPage.css';
 
 interface LoginPageProps {
     onLogin: () => void;
 }
 
-
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
+  const navigate = useNavigate();
+  
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
-    if (isLogin) {
-      console.log('Login:', { username, password });
-      onLogin();
-    } else {
-      console.log('Register:', { username, email, password });
-      setIsLogin(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!emailOrUsername.trim() || !password.trim()) {
+      setError('Please fill in all fields');
+      return;
     }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await userAuthService.login({
+        emailOrUsername: emailOrUsername.trim(),
+        password: password.trim(),
+      });
+
+      console.log('Login success:', response);
+      
+      // Call onLogin callback
+      onLogin();
+      
+      // Navigate to dashboard
+      // navigate('/dashboard');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterClick = () => {
+    navigate('/register');
+  };
+
+  const handleForgotPassword = () => {
+    // TODO: Implement forgot password
+    alert('Forgot password feature coming soon!');
+  };
+
+  const handleSocialLogin = (provider: string) => {
+    // TODO: Implement social login
+    alert(`${provider} login coming soon!`);
   };
 
   return (
@@ -28,125 +70,97 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         {/* Logo và Title */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-purple-500 mb-2">Jira</h1>
-          <p className="text-purple-400 text-lg">
-            {isLogin ? 'Login to continue' : 'Register to get started'}
-          </p>
+          <p className="text-purple-400 text-lg">Login to continue</p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          </div>
+        )}
+
         {/* Form */}
-        <div className="space-y-4">
-          {/* Username */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Email or Username */}
           <div>
             <label className="block text-gray-700 text-sm font-medium mb-2">
-              Username:
+              Email or Username
             </label>
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="Enter your username"
+              placeholder="Enter your email or username"
+              disabled={loading}
             />
           </div>
-
-          {/* Email (chỉ hiển thị khi Register) */}
-          {!isLogin && (
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Email:
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                placeholder="Enter your email"
-              />
-            </div>
-          )}
 
           {/* Password */}
           <div>
             <label className="block text-gray-700 text-sm font-medium mb-2">
-              Password:
+              Password
             </label>
+            <div className="relative">
             <input
-              type="password"
+                type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
               placeholder="Enter your password"
+                disabled={loading}
             />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
-          {/* Forgot Password (chỉ hiển thị khi Login) */}
-          {isLogin && (
+          {/* Forgot Password */}
             <div className="text-right">
-              <button className="text-sm text-purple-500 hover:text-purple-600">
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-sm text-purple-500 hover:text-purple-600"
+            >
                 Forgot password?
               </button>
             </div>
-          )}
 
           {/* Submit Button */}
           <button
-            onClick={handleSubmit}
-            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 rounded-full transition duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 rounded-full transition duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            {isLogin ? 'Login' : 'Register'}
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Logging in...
+              </span>
+            ) : (
+              'Login'
+            )}
           </button>
-        </div>
+        </form>
 
         {/* Toggle Login/Register */}
         <div className="text-center mt-6">
           <p className="text-gray-700 text-sm">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            Don't have an account?{' '}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={handleRegisterClick}
               className="text-purple-500 hover:text-purple-600 font-semibold"
             >
-              {isLogin ? 'Register' : 'Login'}
-            </button>
-          </p>
-        </div>
-
-        {/* Divider */}
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">Or continue with</span>
-          </div>
-        </div>
-
-        {/* Social Login */}
-        <div className="flex justify-center space-x-4">
-          <button className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
-            <Facebook size={24} />
-          </button>
-          
-          <button className="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
-            <MessageCircle size={24} />
-          </button>
-          
-          <button className="w-12 h-12 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.654-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
-            </svg>
-          </button>
-        </div>
-
-        {/* Terms */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-gray-500">
-            By continuing, you agree to our{' '}
-            <button className="text-purple-500 hover:text-purple-600">
-              Terms of Service
-            </button>{' '}
-            and{' '}
-            <button className="text-purple-500 hover:text-purple-600">
-              Privacy Policy
+              Register
             </button>
           </p>
         </div>

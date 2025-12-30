@@ -12,7 +12,7 @@ interface Task {
 }
 
 interface RecentWorkItemsProps {
-  userId: string;
+  userId:  number;
   onViewAssignedTasks: () => Promise<Task[]>;
 }
 

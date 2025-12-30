@@ -10,7 +10,7 @@ import ProjectsModal from './components/ProjectsModal';
 // Import services
 import projectService from '../../services/user/project.service';
 import taskService from '../../services/user/task.service';
-
+import authService from '../../services/user/auth.service';
 // Import types
 import { Project } from '../../models/Project';
 
@@ -36,7 +36,7 @@ const Dashboard: React.FC = () => {
   const [showAllProjects, setShowAllProjects] = useState(false);
 
   // Get current user ID
-  const currentUserId = localStorage.getItem('userId') || '2';
+  const currentUserId = localStorage.getItem('userId') || 2;
 
   // Fetch projects on mount
   useEffect(() => {

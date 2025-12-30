@@ -1,6 +1,5 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import './assignedTaskModal.css';
 
 interface Task {
   id: string;

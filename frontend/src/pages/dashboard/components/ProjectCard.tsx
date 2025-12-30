@@ -1,7 +1,6 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Project } from '../../../models/Project';
-import './projectCard.css';
 
 interface ProjectCardProps {
   project: Project;
