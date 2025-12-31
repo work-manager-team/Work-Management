@@ -1,4 +1,3 @@
-// src/services/project.service.ts
 
 const API_BASE_URL =  'http://localhost:3000';
 
@@ -39,10 +38,88 @@ export interface User {
   avatarUrl?: string;
 }
 
+export interface CreateProjectPayload {
+  name: string;
+  key: string;
+  description: string;
+  status: 'planning' | 'active' | 'on-hold' | 'completed' | 'archived';
+  visibility: 'public' | 'private';
+}
 class ProjectService {
+  // Create new project
+  async createProject(projectData: CreateProjectPayload): Promise<Project> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(projectData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create project: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in createProject:', error);
+      throw error;
+    }
+  }
+
   /**
    * Get all projects for a user
    */
+  // Get count projects
+  async getCountProjects(count: number): Promise<number> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${count}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch count total number of projects: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      throw error;
+    }
+  }
+  // Get all projects
+  async getAllProjects(projectId: number): Promise<Project[]> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      throw error;
+    }
+  }
   async getUserProjects(userId: string | number): Promise<Project[]> {
     try {
       const response = await fetch(

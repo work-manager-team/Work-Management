@@ -62,14 +62,18 @@ class UserAuthService {
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || data.statusCode === 401 || data.statusCode === 400) {
         throw new Error(data.message || 'Login failed');
       }
 
       // Store user data and tokens in localStorage
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('userId', data.user.id.toString());
+        if (localStorage.getItem('user') === null) {
+          console.error("chưa lưu");
+        }
+        console.log("ok", localStorage.getItem('user'));
+        //localStorage.setItem('userId', data.user.id.toString());
       }
 
       if (data.accessToken) {
@@ -121,6 +125,7 @@ class UserAuthService {
    * Logout user
    */
   logout(): void {
+    console.trace("Hàm logout đang được gọi từ đâu?");
     localStorage.removeItem('user');
     localStorage.removeItem('userId');
     localStorage.removeItem('accessToken');

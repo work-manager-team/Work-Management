@@ -36,7 +36,8 @@ const Dashboard: React.FC = () => {
   const [showAllProjects, setShowAllProjects] = useState(false);
 
   // Get current user ID
-  const currentUserId = localStorage.getItem('userId') || 2;
+  const user = localStorage.getItem('user');
+  const currentUserId = user? JSON.parse(user).id : null;
 
   // Fetch projects on mount
   useEffect(() => {

@@ -21,9 +21,12 @@ function App() {
   const [loading, setLoading] = useState(true);
   // Đã login
   useEffect(() => {
+    const checkAuth = () => {
       const authenticated = userAuthService.isAuthenticated();
       setIsLoggedIn(authenticated);
       setLoading(false);
+    };
+    checkAuth();
     }, []);
 
     // Callback khi login thành công
