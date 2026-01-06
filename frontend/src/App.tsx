@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 // Import các page
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
+import VerifyEmail from './pages/auth/VerifyEmail'
 
 import Dashboard from './pages/dashboard/Dashboard'
 import ProjectsPage from './pages/projects/ProjectsPage'
@@ -54,6 +55,12 @@ function App() {
         {/*Public routes*/}
         <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/dashboard" /> : <RegisterPage onRegister={handleRegister} />} />
+
+        {/* ← THÊM ROUTE VERIFY EMAIL */}
+        <Route 
+          path="/verify-email" 
+          element={<VerifyEmail />} 
+        />
 
         <Route path="/*"
                element={
