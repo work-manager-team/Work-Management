@@ -1,13 +1,19 @@
 // src/pages/auth/VerifyEmail.tsx
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import userAuthService from '../../services/user/auth.service';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('');
+  
+  // Resend email states
+  const [showResendForm, setShowResendForm] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -36,7 +42,6 @@ const VerifyEmail = () => {
     try {
       console.log('📤 Calling verify API...');
       
-      // Gọi API verify email
       const response = await fetch('http://localhost:3000/auth/verify-email', {
         method: 'POST',
         headers: {
@@ -71,8 +76,57 @@ const VerifyEmail = () => {
     }
   };
 
+  const handleResendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resendEmail.trim()) {
+      setResendMessage('Vui lòng nhập địa chỉ email');
+      return;
+    }
+
+    setResending(true);
+    setResendMessage('');
+    setResendSuccess(false);
+
+    try {
+      console.log('📤 Resending verification email to:', resendEmail);
+      
+      const response = await fetch('http://localhost:3000/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: resendEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend email');
+      }
+
+      console.log('✅ Email resent successfully');
+      setResendSuccess(true);
+      setResendMessage(data.message || 'Email xác thực đã được gửi lại! Vui lòng kiểm tra hộp thư.');
+      
+      // Clear form after 3 seconds
+      setTimeout(() => {
+        setShowResendForm(false);
+        setResendEmail('');
+        setResendMessage('');
+        setResendSuccess(false);
+      }, 5000);
+    } catch (error: any) {
+      console.error('❌ Resend failed:', error);
+      setResendMessage(error.message || 'Gửi lại thất bại. Vui lòng thử lại.');
+      setResendSuccess(false);
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         
         {/* Verifying State */}
@@ -107,7 +161,7 @@ const VerifyEmail = () => {
             </p>
             <Link
               to="/login"
-              className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+              className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors"
             >
               Đăng nhập ngay
             </Link>
@@ -129,9 +183,90 @@ const VerifyEmail = () => {
               {message}
             </p>
 
+            {/* Resend Email Section */}
+            <div className="mt-6">
+              {!showResendForm ? (
+                // Button to show form
+                <button
+                  onClick={() => setShowResendForm(true)}
+                  className="w-full bg-blue-50 text-blue-600 px-4 py-3 rounded-lg hover:bg-blue-100 font-medium transition-colors mb-4"
+                >
+                  Gửi lại email xác thực
+                </button>
+              ) : (
+                // Resend form
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Gửi lại email xác thực
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowResendForm(false);
+                        setResendEmail('');
+                        setResendMessage('');
+                        setResendSuccess(false);
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <form onSubmit={handleResendEmail} className="space-y-3">
+                    <input
+                      type="email"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      placeholder="Nhập email của bạn"
+                      required
+                      disabled={resending}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    
+                    {resendMessage && (
+                      <div className={`text-sm p-2 rounded ${
+                        resendSuccess 
+                          ? 'bg-green-50 text-green-700 border border-green-200' 
+                          : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}>
+                        {resendMessage}
+                      </div>
+                    )}
+                    
+                    <button
+                      type="submit"
+                      disabled={resending || resendSuccess}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+                    >
+                      {resending ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Đang gửi...
+                        </span>
+                      ) : resendSuccess ? (
+                        '✓ Đã gửi'
+                      ) : (
+                        'Gửi email'
+                      )}
+                    </button>
+                  </form>
+                  
+                  <p className="text-xs text-gray-500 mt-3">
+                    💡 Kiểm tra cả thư mục spam/junk nếu không thấy email
+                  </p>
+                </div>
+              )}
+            </div>
+
             <Link
               to="/login"
-              className="text-blue-600 hover:text-blue-500 font-medium"
+              className="inline-block text-blue-600 hover:text-blue-500 font-medium mt-4"
             >
               ← Quay lại đăng nhập
             </Link>

@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import VerifyEmail from './pages/auth/VerifyEmail'
+import ForgotPassword from './pages/auth/ForgotPassword';
 
 import Dashboard from './pages/dashboard/Dashboard'
 import ProjectsPage from './pages/projects/ProjectsPage'
@@ -56,10 +57,16 @@ function App() {
         <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/dashboard" /> : <RegisterPage onRegister={handleRegister} />} />
 
-        {/* ← THÊM ROUTE VERIFY EMAIL */}
+        {/* ROUTE VERIFY EMAIL */}
         <Route 
           path="/verify-email" 
           element={<VerifyEmail />} 
+        />
+
+        {/* ROUTE FORGOT PASSWORD */}
+        <Route 
+          path="/forgot-password" 
+          element={isLoggedIn ? <Navigate to="/dashboard" /> : <ForgotPassword />} 
         />
 
         <Route path="/*"

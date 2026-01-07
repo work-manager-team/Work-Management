@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { X, User } from 'lucide-react';
+import { X, User, UserPlus } from 'lucide-react';
 import projectService, { ProjectMember, User as UserType } from '../../../services/user/project.service';
 import './ProjectMembersModal.css';
+import authService from '../../../services/user/auth.service';
+import AddMemberModal from './AddMemberModal';
+
 
 interface ProjectMembersModalProps {
   projectId: number;
@@ -23,7 +26,9 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   const [members, setMembers] = useState<MemberWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  
   useEffect(() => {
     fetchMembers();
   }, [projectId]);
@@ -33,8 +38,20 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     setError(null);
 
     try {
+      // Get current user
+      const currentUser = authService.getCurrentUser();
+      
+      if (!currentUser) {
+        throw new Error('No user logged in');
+      }
       // Fetch project members
       const projectMembers = await projectService.getProjectMembers(projectId);
+      
+      // Find current user's role in the project
+      const currentMember = projectMembers.find(m => m.userId === currentUser.id);
+      if (currentMember) {
+        setCurrentUserRole(currentMember.role.toLowerCase());
+      }
 
       // Fetch user details for each member
       const membersWithDetails = await Promise.all(
@@ -106,7 +123,24 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     });
   };
 
+  // Check if current user can add members (admin or owner role)
+  const canAddMembers = currentUserRole === 'admin' || currentUserRole === 'member';
+
+  const handleAddMemberSuccess = () => {
+    // Refresh members list after adding new members
+    fetchMembers();
+  };
+
+  // Get existing member IDs (only admin, member, and owner roles)
+  const existingMemberIds = members
+    .filter(m => {
+      const status = m.status.toLowerCase();
+      return status === 'active';
+    })
+    .map(m => m.userId);
+
   return (
+    <>
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content members-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -115,10 +149,22 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
             <h2>Project Members</h2>
             <p className="project-name">{projectName}</p>
           </div>
+
+          <div className="header-actions">
+              {canAddMembers && !loading && (
+                <button
+                  className="add-member-button"
+                  onClick={() => setShowAddMemberModal(true)}
+                  title="Add Member"
+                >
+                  <UserPlus size={20} />
+                </button>
+              )}
           <button className="close-button" onClick={onClose}>
             <X size={24} />
           </button>
         </div>
+      </div>
 
         {/* Body */}
         <div className="modal-body">
@@ -145,7 +191,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
               <table className="members-table">
                 <thead>
                   <tr>
-                    <th>User ID</th>
+                    
                     <th>Name</th>
                     <th>Role</th>
                     <th>Status</th>
@@ -156,7 +202,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
                 <tbody>
                   {members.map((member) => (
                     <tr key={member.userId}>
-                      <td className="member-id">{member.userId}</td>
+                      
                       <td className="member-info">
                         <div className="member-avatar-name">
                           {member.avatarUrl ? (
@@ -203,6 +249,17 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
         )}
       </div>
     </div>
+
+    {/* Add Member Modal */}
+    {showAddMemberModal && (
+      <AddMemberModal
+        projectId={projectId}
+        existingMemberIds={existingMemberIds}
+        onClose={() => setShowAddMemberModal(false)}
+        onSuccess={handleAddMemberSuccess}
+      />
+    )}
+    </>
   );
 };
 

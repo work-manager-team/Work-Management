@@ -55,17 +55,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   const handleForgotPassword = () => {
-    // TODO: Implement forgot password
-    alert('Forgot password feature coming soon!');
+    navigate('/forgot-password');
   };
 
-  const handleSocialLogin = (provider: string) => {
-    // TODO: Implement social login
-    alert(`${provider} login coming soon!`);
-  };
+ 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-purple-400 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         {/* Logo và Title */}
         <div className="text-center mb-8">

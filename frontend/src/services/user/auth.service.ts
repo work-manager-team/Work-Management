@@ -121,6 +121,7 @@ class UserAuthService {
     }
   }
 
+  
   /**
    * Logout user
    */

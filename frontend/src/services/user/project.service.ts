@@ -43,7 +43,7 @@ export interface CreateProjectPayload {
   key: string;
   description: string;
   status: 'planning' | 'active' | 'on-hold' | 'completed' | 'archived';
-  visibility: 'public' | 'private';
+  visibility: 'public' | 'private' | 'team';
 }
 class ProjectService {
   // Create new project
@@ -224,6 +224,55 @@ class ProjectService {
       throw error;
     }
   }
+
+  // Get all users
+  async getAllUsers(): Promise<User[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch users: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in getAllUsers:', error);
+    throw error;
+  }
+  }
+
+  // Add a member to project
+  async addProjectMember(projectId: number, userId: number, role: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        role
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to add project member: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in addProjectMember:', error);
+    throw error;
+  }
+}
+
 }
 
 export default new ProjectService();

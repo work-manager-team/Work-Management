@@ -191,7 +191,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
               >
                 <option value="planning">Planning</option>
                 <option value="active">Active</option>
-                <option value="on-hold">On Hold</option>
+                <option value="on_hold">On Hold</option>
                 <option value="completed">Completed</option>
                 <option value="archived">Archived</option>
               </select>
