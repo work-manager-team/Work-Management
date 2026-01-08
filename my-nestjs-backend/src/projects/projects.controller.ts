@@ -93,6 +93,38 @@ export class ProjectsController {
     // TODO: Get userId from JWT token
     const userId = 1;
     const role = await this.projectsService.getUserRole(id, userId);
-    return { role };
+    return {
+      projectId: id,
+      userId,
+      role
+    };
+  }
+
+  @Get(':projectId/users/:userId/role')
+  async getUserRoleByIds(
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    // TODO: Optional - Check if requester has permission to view this info
+    // For now, any member can view other member's role in the same project
+
+    const role = await this.projectsService.getUserRole(projectId, userId);
+
+    if (role === null) {
+      return {
+        statusCode: 404,
+        message: 'User không phải là thành viên của project này',
+        projectId,
+        userId,
+        role: null,
+      };
+    }
+
+    return {
+      statusCode: 200,
+      projectId,
+      userId,
+      role
+    };
   }
 }
