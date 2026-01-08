@@ -17,9 +17,9 @@ export class CreateTaskDto {
   @IsOptional()
   type?: 'task' | 'bug' | 'story' | 'epic' | 'subtask';
 
-  @IsEnum(['backlog', 'todo', 'in_progress', 'in_review', 'testing', 'blocked', 'done', 'closed'])
+  @IsEnum(['todo', 'in_progress', 'done', 'not_completed'])
   @IsOptional()
-  status?: 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'testing' | 'blocked' | 'done' | 'closed';
+  status?: 'todo' | 'in_progress' | 'done' | 'not_completed';
 
   @IsEnum(['lowest', 'low', 'medium', 'high', 'highest'])
   @IsOptional()

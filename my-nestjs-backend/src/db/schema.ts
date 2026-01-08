@@ -94,6 +94,10 @@ export const users = pgTable(
     status: userStatusEnum('status').notNull().default('unverified'),
     emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    // Google OAuth fields
+    googleId: varchar('google_id', { length: 255 }),
+    // Track authentication provider
+    provider: varchar('provider', { length: 50 }).default('local'), // 'local', 'google'
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -102,6 +106,8 @@ export const users = pgTable(
     usernameIdx: index('idx_users_username').on(table.username),
     statusIdx: index('idx_users_status').on(table.status),
     lastLoginIdx: index('idx_users_last_login').on(table.lastLoginAt),
+    googleIdIdx: index('idx_users_google_id').on(table.googleId),
+    providerIdx: index('idx_users_provider').on(table.provider),
   })
 );
 

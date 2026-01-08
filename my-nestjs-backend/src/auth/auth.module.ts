@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { DatabaseModule } from '../db/database.module';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
     DatabaseModule,
     ConfigModule,
+    PassportModule.register({ defaultStrategy: 'google' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -21,7 +24,7 @@ import { DatabaseModule } from '../db/database.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, GoogleStrategy],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
