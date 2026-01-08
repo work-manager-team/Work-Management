@@ -127,8 +127,9 @@ const ProjectsPage = () => {
         // 2. Projects mà user là thành viên (bất kể visibility)
         allProjects = allFetchedProjects.filter(project => {
           const isPublic = project.visibility.toLowerCase() === 'public';
+          const isTeam = project.visibility.toLowerCase() === 'team';
           const isMember = userProjectIds.has(project.id);
-          return isPublic || isMember;
+          return isPublic || isMember || isTeam;
         });
         // Cập nhật số lượng All Projects
         setProjectCount(prev => ({ ...prev, all: allProjects.length }));

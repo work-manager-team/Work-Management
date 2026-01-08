@@ -86,8 +86,44 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
         throw new Error(errorData.message || 'Failed to create project');
       }
 
+      const newProject = await response.json();
+      const projectId = newProject.id; // Lấy ID của project vừa tạo
+
+      // Thêm user hiện tại làm admin
+      const user = localStorage.getItem('user');
+      const currentUserId = user ? JSON.parse(user).id : null;
+
+      if (currentUserId) {
+        const addMemberResponse = await fetch(`http://localhost:3000/projects/${projectId}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: currentUserId,
+            role: 'admin'
+          }),
+        });
+
+        if (!addMemberResponse.ok) {
+          console.error('Failed to add user as admin member');
+          // Có thể throw error hoặc tiếp tục tùy yêu cầu
+        }
+        //cập nhật status của người tạo project thành active (đã tham gia)
+        const updateStatus = await fetch(`http://localhost:3000/projects/${projectId}/members/${currentUserId}/accept`, {
+          method: 'PATCH',
+          
+        });
+        if (!updateStatus.ok) {
+          console.error('Failed to update status as active');
+        }
+      }
+
       // Success
       onProjectCreated();
+      
+      
+      
       onClose();
     } catch (err: any) {
       console.error('Error creating project:', err);
