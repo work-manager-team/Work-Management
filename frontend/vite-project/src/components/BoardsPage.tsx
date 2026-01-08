@@ -160,7 +160,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
 
     const updateTaskStatus = async (taskId: string, newStatus: 'todo' | 'in_progress' | 'done' | 'not_completed') => {
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/tasks/${taskId}`, {
+            const response = await fetch(`https://work-management-chi.vercel.app/tasks/${taskId}/status`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -169,10 +169,17 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
             });
 
             if (!response.ok) {
-                console.error('Error updating task status');
+                const errorData = await response.json();
+                console.error('Error updating task status:', response.status, errorData);
+                throw new Error(`Failed to update task status: ${response.statusText}`);
             }
+
+            const result = await response.json();
+            console.log('Task status updated successfully:', result);
+            return result;
         } catch (error) {
             console.error('Error updating task status:', error);
+            throw error;
         }
     };
 

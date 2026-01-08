@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Trash2, Clock } from 'lucide-react';
 import Layout from './Layout';
 
@@ -16,48 +16,36 @@ interface NotificationsPageProps {
 }
 
 const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
-    const [notifications, setNotifications] = useState<Notification[]>([
-        {
-            id: '1',
-            title: 'Task Assigned',
-            message: 'You have been assigned to "Redesign Dashboard" task',
-            time: '2 hours ago',
-            read: false,
-            type: 'info'
-        },
-        {
-            id: '2',
-            title: 'Task Completed',
-            message: 'John completed the "API Integration" task',
-            time: '4 hours ago',
-            read: false,
-            type: 'success'
-        },
-        {
-            id: '3',
-            title: 'Comment Added',
-            message: 'Sarah commented on your task "User Authentication"',
-            time: '1 day ago',
-            read: true,
-            type: 'info'
-        },
-        {
-            id: '4',
-            title: 'Deadline Alert',
-            message: '"Database Migration" task is due in 2 hours',
-            time: '1 day ago',
-            read: true,
-            type: 'warning'
-        },
-        {
-            id: '5',
-            title: 'Project Update',
-            message: 'Project "Mobile App" has been updated with new requirements',
-            time: '2 days ago',
-            read: true,
-            type: 'info'
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch notifications on component mount
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            setLoading(true);
+            const user = localStorage.getItem('user');
+            const userId = user ? JSON.parse(user).id : null;
+
+            if (!userId) {
+                console.error('User ID not found in localStorage');
+                return;
+            }
+
+            const response = await fetch(`https://work-management-chi.vercel.app/notifications/user/${userId}`);
+            const data = await response.json();
+            const notificationsData: Notification[] = Array.isArray(data) ? data : data.data || [];
+            setNotifications(notificationsData);
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            setNotifications([]);
+        } finally {
+            setLoading(false);
         }
-    ]);
+    };
 
     const markAsRead = (id: string) => {
         setNotifications(
@@ -67,8 +55,26 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
         );
     };
 
-    const deleteNotification = (id: string) => {
-        setNotifications(notifications.filter((notif) => notif.id !== id));
+    const deleteNotification = async (id: string) => {
+        try {
+            const response = await fetch(`https://work-management-chi.vercel.app/notifications/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Error deleting notification:', response.statusText);
+                return;
+            }
+
+            // Remove from UI after successful deletion
+            setNotifications(notifications.filter((notif) => notif.id !== id));
+            console.log('Notification deleted successfully');
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+        }
     };
 
     const unreadCount = notifications.filter((n) => !n.read).length;
@@ -134,59 +140,68 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
                     </div>
                 </div>
 
+                {/* Loading State */}
+                {loading && (
+                    <div className="flex items-center justify-center h-96">
+                        <div className="text-gray-500">Loading notifications...</div>
+                    </div>
+                )}
+
                 {/* Notifications List */}
-                <div className="space-y-3">
-                    {notifications.length === 0 ? (
-                        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                            <Bell size={48} className="mx-auto text-gray-400 mb-3" />
-                            <p className="text-gray-600 text-lg">No notifications</p>
-                        </div>
-                    ) : (
-                        notifications.map((notification) => (
-                            <div
-                                key={notification.id}
-                                className={`border rounded-lg p-4 transition ${notification.read
-                                    ? 'bg-white border-gray-200'
-                                    : `${getTypeBgColor(notification.type)}`
-                                    }`}
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-start space-x-3 flex-1">
-                                        <Bell
-                                            size={20}
-                                            className={`mt-1 flex-shrink-0 ${getTypeIconColor(notification.type)}`}
-                                        />
-                                        <div className="flex-1">
-                                            <h3 className="font-semibold text-gray-800">{notification.title}</h3>
-                                            <p className="text-gray-700 text-sm mt-1">{notification.message}</p>
-                                            <div className="flex items-center text-gray-500 text-xs mt-2 space-x-1">
-                                                <Clock size={14} />
-                                                <span>{notification.time}</span>
+                {!loading && (
+                    <div className="space-y-3">
+                        {notifications.length === 0 ? (
+                            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                                <Bell size={48} className="mx-auto text-gray-400 mb-3" />
+                                <p className="text-gray-600 text-lg">No notifications</p>
+                            </div>
+                        ) : (
+                            notifications.map((notification) => (
+                                <div
+                                    key={notification.id}
+                                    className={`border rounded-lg p-4 transition ${notification.read
+                                        ? 'bg-white border-gray-200'
+                                        : `${getTypeBgColor(notification.type)}`
+                                        }`}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start space-x-3 flex-1">
+                                            <Bell
+                                                size={20}
+                                                className={`mt-1 flex-shrink-0 ${getTypeIconColor(notification.type)}`}
+                                            />
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-gray-800">{notification.title}</h3>
+                                                <p className="text-gray-700 text-sm mt-1">{notification.message}</p>
+                                                <div className="flex items-center text-gray-500 text-xs mt-2 space-x-1">
+                                                    <Clock size={14} />
+                                                    <span>{notification.time}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="flex items-center space-x-2 ml-4">
-                                        {!notification.read && (
+                                        <div className="flex items-center space-x-2 ml-4">
+                                            {!notification.read && (
+                                                <button
+                                                    onClick={() => markAsRead(notification.id)}
+                                                    className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded transition"
+                                                >
+                                                    Mark Read
+                                                </button>
+                                            )}
                                             <button
-                                                onClick={() => markAsRead(notification.id)}
-                                                className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded transition"
+                                                onClick={() => deleteNotification(notification.id)}
+                                                className="text-gray-500 hover:text-red-600 transition"
                                             >
-                                                Mark Read
+                                                <Trash2 size={18} />
                                             </button>
-                                        )}
-                                        <button
-                                            onClick={() => deleteNotification(notification.id)}
-                                            className="text-gray-500 hover:text-red-600 transition"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
-                    )}
-                </div>
+                            ))
+                        )}
+                    </div>
+                )}
             </div>
         </Layout>
     );
