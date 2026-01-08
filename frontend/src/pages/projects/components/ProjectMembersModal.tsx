@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { X, User, UserPlus } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { X, User, UserPlus, Trash2, Check } from 'lucide-react';
 import projectService, { ProjectMember, User as UserType } from '../../../services/user/project.service';
 import './ProjectMembersModal.css';
 import authService from '../../../services/user/auth.service';
@@ -18,6 +18,12 @@ interface MemberWithDetails extends ProjectMember {
   inviterName?: string;
 }
 
+interface RoleChange {
+  userId: number;
+  newRole: string;
+  oldRole: string;
+}
+
 const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   projectId,
   projectName,
@@ -26,24 +32,58 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   const [members, setMembers] = useState<MemberWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
+  // State cho role changes
+  const [roleDropdownUserId, setRoleDropdownUserId] = useState<number | null>(null);
+  const [pendingRoleChanges, setPendingRoleChanges] = useState<Map<number, RoleChange>>(new Map());
+  const [savingRoles, setSavingRoles] = useState(false);
+
+  // Ref cho dropdown (để close khi click outside)
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  // các role có thể chọn
+  const AVAILABLE_ROLES = ['admin', 'member', 'viewer'];
   useEffect(() => {
     fetchMembers();
   }, [projectId]);
+
+  // close dropdown khi click ra ngoài
+  useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      setRoleDropdownUserId(null);
+    }
+  };
+
+  if (roleDropdownUserId !== null) {
+    document.addEventListener('mousedown', handleClickOutside);
+  }
+
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+  }, [roleDropdownUserId]);
+  
 
   const fetchMembers = async () => {
     setLoading(true);
     setError(null);
 
     try {
+
       // Get current user
       const currentUser = authService.getCurrentUser();
       
       if (!currentUser) {
         throw new Error('No user logged in');
       }
+
+      // Lưu current userId
+      setCurrentUserId(currentUser.id);
+
       // Fetch project members
       const projectMembers = await projectService.getProjectMembers(projectId);
       
@@ -98,6 +138,10 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     }
   };
 
+  const activeCount = useMemo(() => {
+  return members.filter(m => m.status.toLowerCase() === 'active').length;
+  }, [members]);
+
   const getRoleBadgeClass = (role: string) => {
     const roleLower = role.toLowerCase();
     if (roleLower === 'owner' || roleLower === 'admin') return 'role-admin';
@@ -125,20 +169,184 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
 
   // Check if current user can add members (admin or owner role)
   const canAddMembers = currentUserRole === 'admin' || currentUserRole === 'member';
-
+  // Check if current user can delete members (only admin)
+  const canDeleteMembers = currentUserRole === 'admin';
   const handleAddMemberSuccess = () => {
     // Refresh members list after adding new members
     fetchMembers();
   };
 
-  // Get existing member IDs (only admin, member, and owner roles)
+  // Check if a member can be deleted
+  const canDeleteMember = (member: MemberWithDetails): boolean => {
+    // Only admin can delete
+    if (!canDeleteMembers) return false;
+
+    // Can't delete yourself
+    if (member.userId === currentUserId) return false;
+
+    // Can only delete members with status active or invited
+    const status = member.status.toLowerCase();
+    return status === 'active' || status === 'invited';
+  };
+
+  // Handle delete button click - show confirmation
+  const handleDeleteClick = (userId: number) => {
+  setConfirmDeleteUserId(userId);
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = async (userId: number) => {
+    setDeletingUserId(userId);
+    setError(null);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/projects/${projectId}/members/${userId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete member: ${response.statusText}`);
+      }
+
+      // Success - refresh members list
+      await fetchMembers();
+
+      
+    } catch (err: any) {
+      console.error('Error deleting member:', err);
+      setError(err.message || 'Failed to delete member. Please try again.');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setConfirmDeleteUserId(null);
+  };
+
+  // Get existing member IDs (only admin, member active)
   const existingMemberIds = members
     .filter(m => {
       const status = m.status.toLowerCase();
-      return status === 'active';
+      return status === 'active' || status === 'invited';
     })
     .map(m => m.userId);
+  
+  
+  //check quyền admin khi thay đổi role của member
+  const canChangeRoles = currentUserRole === 'admin';
 
+  const canChangeRole = (member: MemberWithDetails): boolean => {
+    if (!canChangeRoles) return false;
+    if (member.userId === currentUserId) return false; // Can't change own role
+    const status = member.status.toLowerCase();
+    return status === 'active'; // Only active members
+  };
+  
+  //handle change role
+  const handleRoleClick = (userId: number) => {
+  if (roleDropdownUserId === userId) {
+    setRoleDropdownUserId(null); // Close if already open
+  } else {
+    setRoleDropdownUserId(userId); // Open dropdown
+  }
+  };
+
+  const handleRoleSelect = (userId: number, newRole: string) => {
+  const member = members.find(m => m.userId === userId);
+  if (!member) return;
+
+  const oldRole = member.role;
+  
+  // Update UI immediately (optimistic update)
+  setMembers(prevMembers =>
+    prevMembers.map(m =>
+      m.userId === userId ? { ...m, role: newRole } : m
+    )
+  );
+
+  // Add to pending changes
+  setPendingRoleChanges(prev => {
+    const newChanges = new Map(prev);
+    newChanges.set(userId, { userId, newRole, oldRole });
+    return newChanges;
+  });
+
+  // Close dropdown
+  setRoleDropdownUserId(null);
+  };
+
+  // handle save role change
+  const handleSaveRoleChanges = async () => {
+  if (pendingRoleChanges.size === 0) return;
+
+  setSavingRoles(true);
+  setError(null);
+
+  try {
+    // Process each role change
+    for (const [userId, change] of pendingRoleChanges) {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/projects/${projectId}/members/${userId}/role`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ role: change.newRole }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to update role for user ${userId}`);
+        }
+      } catch (err) {
+        console.error(`Error updating role for user ${userId}:`, err);
+        // Continue with other updates even if one fails
+      }
+    }
+
+    // Clear pending changes
+    setPendingRoleChanges(new Map());
+
+    // Refresh members to get accurate data
+    await fetchMembers();
+  } catch (err: any) {
+    console.error('Error saving role changes:', err);
+    setError(err.message || 'Failed to save role changes. Please try again.');
+  } finally {
+    setSavingRoles(false);
+  }
+  };
+
+  // handle hủy change role
+  const handleCancelRoleChanges = () => {
+  // Revert UI changes
+  setMembers(prevMembers =>
+    prevMembers.map(m => {
+      const pendingChange = pendingRoleChanges.get(m.userId);
+      if (pendingChange) {
+        return { ...m, role: pendingChange.oldRole };
+      }
+      return m;
+    })
+  );
+
+  // Clear pending changes
+  setPendingRoleChanges(new Map());
+  };
+
+  // Get current role for member (with pending changes)
+  const getCurrentRole = (member: MemberWithDetails): string => {
+    return member.role; // Already updated in state
+  };
   return (
     <>
     <div className="modal-overlay" onClick={onClose}>
@@ -151,6 +359,25 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
           </div>
 
           <div className="header-actions">
+              {/* Show buttons khi có pending changes */}
+              {pendingRoleChanges.size > 0 && (
+                <>
+                  <button
+                    className="cancel-role-button"
+                    onClick={handleCancelRoleChanges}
+                    disabled={savingRoles}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    className="save-role-button"
+                    onClick={handleSaveRoleChanges}
+                    disabled={savingRoles}
+                  >
+                    {savingRoles ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </>
+              )}
               {canAddMembers && !loading && (
                 <button
                   className="add-member-button"
@@ -197,42 +424,124 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
                     <th>Status</th>
                     <th>Invited By</th>
                     <th>Joined At</th>
+                    {canDeleteMembers && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((member) => (
-                    <tr key={member.userId}>
-                      
-                      <td className="member-info">
-                        <div className="member-avatar-name">
-                          {member.avatarUrl ? (
-                            <img
-                              src={member.avatarUrl}
-                              alt={member.fullName}
-                              className="member-avatar"
-                            />
-                          ) : (
-                            <div className="member-avatar-placeholder">
-                              <User size={20} />
+                  {members.map((member) => {
+                    const currentRole = getCurrentRole(member);
+                    const hasRoleChange = pendingRoleChanges.has(member.userId);
+
+                    return (
+                      <tr key={member.userId} className={hasRoleChange ? 'role-changed' : ''}>
+                        <td className='member-info'>
+                          <div className="member-avatar-name">
+                            {member.avatarUrl ? (
+                              <img
+                                src={member.avatarUrl}
+                                alt={member.fullName}
+                                className="member-avatar"
+                              />
+                            ) : (
+                              <div className="member-avatar-placeholder">
+                                <User size={20} />
+                              </div>
+                            )}
+                            <span className="member-name">{member.fullName}</span>
+                          </div>
+                        </td>
+                        <td className="role-cell">
+                          {canChangeRole(member) ? (
+                            <div className="role-selector" ref={roleDropdownUserId === member.userId ? dropdownRef : null}>
+                              {/* Clickable badge */}
+                              <button
+                                className={`role-badge ${getRoleBadgeClass(currentRole)} clickable ${hasRoleChange ? 'changed' : ''}`}
+                                onClick={() => handleRoleClick(member.userId)}
+                                disabled={savingRoles}
+                              >
+                                {currentRole}
+                              </button>
+                              
+                              {/* Dropdown menu */}
+                              {roleDropdownUserId === member.userId && (
+                                <div className="role-dropdown">
+                                  {AVAILABLE_ROLES.map((role) => (
+                                    <div
+                                      key={role}
+                                      className={`role-option ${currentRole.toLowerCase() === role ? 'selected' : ''}`}
+                                      onClick={() => handleRoleSelect(member.userId, role)}
+                                    >
+                                      <span>{role}</span>
+                                      {currentRole.toLowerCase() === role && (
+                                        <Check size={16} className="check-icon" />
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
+                          ) : (
+                            /* Non-clickable badge */
+                            <span className={`role-badge ${getRoleBadgeClass(currentRole)}`}>
+                              {currentRole}
+                            </span>
                           )}
-                          <span className="member-name">{member.fullName}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`role-badge ${getRoleBadgeClass(member.role)}`}>
-                          {member.role}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${getStatusBadgeClass(member.status)}`}>
-                          {member.status}
-                        </span>
-                      </td>
-                      <td className="inviter-name">{member.inviterName}</td>
-                      <td className="joined-date">{formatDate(member.joinedAt)}</td>
-                    </tr>
-                  ))}
+                        </td>
+                        
+                        <td>
+                          <span className={`status-badge ${getStatusBadgeClass(member.status)}`}>
+                            {member.status}
+                          </span>
+                        </td>
+                        <td className="inviter-name">{member.inviterName}</td>
+                        <td className="joined-date">{formatDate(member.joinedAt)}</td>
+                        {canDeleteMembers && (
+                          <td className="member-actions">
+                          {canDeleteMember(member) ? (
+                            <div className="action-cell">
+                              {/* Nếu đang confirm userId này */}
+                              {confirmDeleteUserId === member.userId ? (
+                                // Hiện 2 buttons: Xác nhận | Hủy
+                                <div className="inline-confirm">
+                                  <button
+                                    className="confirm-yes-button"
+                                    onClick={() => handleConfirmDelete(member.userId)}
+                                    disabled={deletingUserId === member.userId}
+                                  >
+                                    {deletingUserId === member.userId ? '...' : 'Xác nhận'}
+                                  </button>
+                                  <button
+                                    className="confirm-no-button"
+                                    onClick={handleCancelDelete}
+                                    disabled={deletingUserId === member.userId}
+                                  >
+                                    Hủy
+                                  </button>
+                                </div>
+                              ) : (
+                                // Hiện button Trash
+                                <button
+                                  className="delete-member-button"
+                                  onClick={() => handleDeleteClick(member.userId)}
+                                  disabled={deletingUserId !== null}
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="no-action"></span>
+                          )}
+                        </td>
+                      
+                        )}
+                      
+                      
+
+                      </tr>
+                    );
+                    
+                  })}
                 </tbody>
               </table>
             </div>
@@ -243,12 +552,13 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
         {!loading && !error && members.length > 0 && (
           <div className="modal-footer">
             <p className="members-count">
-              Total: {members.length} member{members.length !== 1 ? 's' : ''}
+              Total: {activeCount} member{activeCount !== 1 ? 's' : ''}
             </p>
           </div>
         )}
       </div>
     </div>
+    
 
     {/* Add Member Modal */}
     {showAddMemberModal && (
