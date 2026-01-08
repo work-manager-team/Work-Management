@@ -1,10 +1,10 @@
 // src/tasks/tasks.service.ts
-import { 
-  Injectable, 
-  Inject, 
-  NotFoundException, 
-  ForbiddenException, 
-  BadRequestException 
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException
 } from '@nestjs/common';
 import { eq, and, desc } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
@@ -12,12 +12,14 @@ import { DRIZZLE } from '../db/database.module';
 import { tasks, projectMembers, sprints, Task } from '../db/schema';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { NotificationHelperService } from '../notifications/notification-helper.service';
 import * as schema from '../db/schema';
 
 @Injectable()
 export class TasksService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    private notificationHelper: NotificationHelperService,
   ) {}
 
   async create(createTaskDto: CreateTaskDto, reporterId: number): Promise<Task> {
@@ -91,7 +93,33 @@ export class TasksService {
       })
       .returning();
 
-    return result[0];
+    const createdTask = result[0];
+
+    // Send notifications to project members
+    try {
+      await this.notificationHelper.notifyTaskCreated(
+        createdTask.projectId,
+        createdTask.id,
+        createdTask.title,
+        reporterId
+      );
+
+      // If task is assigned to someone, send additional notification
+      if (createdTask.assigneeId) {
+        await this.notificationHelper.notifyTaskAssigned(
+          createdTask.id,
+          createdTask.title,
+          createdTask.assigneeId,
+          reporterId,
+          createdTask.projectId
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send task creation notifications:', error);
+      // Don't throw error - task is created, just notification failed
+    }
+
+    return createdTask;
   }
 
   async findAll(): Promise<Task[]> {
@@ -234,8 +262,8 @@ export class TasksService {
   }
 
   async updateStatus(
-    id: number, 
-    status: string, 
+    id: number,
+    status: string,
     userId: number
   ): Promise<Task> {
     const task = await this.findOne(id, userId);
@@ -246,11 +274,17 @@ export class TasksService {
       throw new ForbiddenException('Bạn không có quyền cập nhật status');
     }
 
+    // Validate status value
+    const validStatuses = ['todo', 'in_progress', 'done', 'not_completed'];
+    if (!validStatuses.includes(status)) {
+      throw new BadRequestException('Status không hợp lệ. Chỉ chấp nhận: todo, in_progress, done, not_completed');
+    }
+
     const result = await this.db
       .update(tasks)
-      .set({ 
+      .set({
         status: status as any,
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(tasks.id, id))
       .returning();
@@ -259,8 +293,8 @@ export class TasksService {
   }
 
   async assignTask(
-    id: number, 
-    assigneeId: number, 
+    id: number,
+    assigneeId: number,
     userId: number
   ): Promise<Task> {
     const task = await this.findOne(id, userId);
@@ -279,9 +313,55 @@ export class TasksService {
 
     const result = await this.db
       .update(tasks)
-      .set({ 
+      .set({
         assigneeId,
-        updatedAt: new Date() 
+        updatedAt: new Date()
+      })
+      .where(eq(tasks.id, id))
+      .returning();
+
+    const updatedTask = result[0];
+
+    // Send notification to assignee
+    try {
+      await this.notificationHelper.notifyTaskAssigned(
+        updatedTask.id,
+        updatedTask.title,
+        assigneeId,
+        userId,
+        updatedTask.projectId
+      );
+    } catch (error) {
+      console.error('Failed to send task assignment notification:', error);
+    }
+
+    return updatedTask;
+  }
+
+  async updatePriority(
+    id: number,
+    priority: string,
+    userId: number
+  ): Promise<Task> {
+    const task = await this.findOne(id, userId);
+
+    // Member or admin can update priority
+    const canUpdate = await this.checkPermission(task.projectId, userId, ['member', 'admin']);
+    if (!canUpdate) {
+      throw new ForbiddenException('Bạn không có quyền cập nhật priority');
+    }
+
+    // Validate priority value
+    const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
+    if (!validPriorities.includes(priority)) {
+      throw new BadRequestException('Priority không hợp lệ. Chỉ chấp nhận: lowest, low, medium, high, highest');
+    }
+
+    const result = await this.db
+      .update(tasks)
+      .set({
+        priority: priority as any,
+        updatedAt: new Date()
       })
       .where(eq(tasks.id, id))
       .returning();
