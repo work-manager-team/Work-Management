@@ -12,6 +12,7 @@ import ProjectsPage from './pages/projects/ProjectsPage'
 import ProjectDetailsPage from './pages/projects/ProjectDetailsPage';
 //import Calendar from './pages/calendar/Calendar';
 //import Table from './pages/table/Table';
+import BoardsPage from './pages/boards/BoardsPage';
 
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -80,6 +81,7 @@ function App() {
 
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+          <Route path="/boards" element={<BoardsPage onLogout={handleLogout} />} />
           <Route path="/reports" element={<div>Reports Page</div>} />
           <Route path="/notifications" element={<div>Notifications Page</div>} />
           <Route path="/settings" element={<div>Settings Page</div>} />
