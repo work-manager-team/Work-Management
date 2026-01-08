@@ -11,38 +11,75 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto, @Res() res: Response) {
+    const user = await this.usersService.create(createUserDto);
+
+    // Generate access token
+    const accessToken = this.authService.generateAccessToken(user as any);
+
+    // Set httpOnly cookie with 7 days expiry
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(201).json({
+      statusCode: 201,
+      message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.',
+      user,
+      accessToken,
+    });
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginUserDto) {
+  async login(@Body() loginDto: LoginUserDto, @Res() res: Response) {
     const user = await this.usersService.validateUser(loginDto);
     if (!user) {
-      return {
+      return res.status(401).json({
         statusCode: 401,
         message: 'Email/Username hoặc password không đúng',
-      };
+      });
     }
-    return {
+
+    // Generate access token
+    const accessToken = this.authService.generateAccessToken(user as any);
+
+    // Set httpOnly cookie with 7 days expiry
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(200).json({
       statusCode: 200,
       message: 'Đăng nhập thành công',
       user,
-    };
+      accessToken,
+    });
   }
 
   @Get()
