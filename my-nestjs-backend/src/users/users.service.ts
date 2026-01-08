@@ -58,9 +58,9 @@ export class UsersService {
       'email_verification',
     );
 
-    // Build verification link
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
-    const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+    // Build verification link - point to API endpoint
+    const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+    const verificationLink = `${baseUrl}/auth/verify-email/${verificationToken}`;
 
     // Send verification email
     try {
