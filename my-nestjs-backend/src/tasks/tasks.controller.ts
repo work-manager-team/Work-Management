@@ -105,6 +105,16 @@ export class TasksController {
     return this.tasksService.assignTask(id, assigneeId, userId);
   }
 
+  @Patch(':id/priority')
+  updatePriority(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('priority') priority: string,
+  ) {
+    // TODO: Get userId from JWT token
+    const userId = 1;
+    return this.tasksService.updatePriority(id, priority, userId);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseIntPipe) id: number) {
