@@ -12,7 +12,9 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import { EmailService } from '../email/email.service';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -24,10 +26,14 @@ import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
+  ) {}
 
   /**
-   * Verify email with token
+   * Verify email with token (POST - for API calls)
    */
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
@@ -44,8 +50,35 @@ export class AuthController {
   }
 
   /**
+   * Verify email with token (GET - for email links)
+   * User clicks link in email → directly verifies
+   */
+  @Get('verify-email/:token')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmailViaLink(@Req() req: Request, @Res() res: Response) {
+    try {
+      const token = req.params.token;
+      const user = await this.authService.verifyEmail(token);
+
+      const { passwordHash, ...userWithoutPassword } = user;
+
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'Email đã được xác thực thành công! Bạn có thể đóng trang này và đăng nhập.',
+        user: userWithoutPassword,
+        success: true,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: error.message || 'Xác thực email thất bại',
+        success: false,
+      });
+    }
+  }
+
+  /**
    * Resend verification email
-   * Note: Email sending logic will be handled by EmailService
    */
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
@@ -63,10 +96,25 @@ export class AuthController {
     // Generate new token
     const token = this.authService.generateToken(user.id, user.email, 'email_verification');
 
+    // Build verification link - point to API endpoint
+    const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+    const verificationLink = `${baseUrl}/auth/verify-email/${token}`;
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.fullName || user.username,
+        verificationLink,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+    }
+
     return {
       statusCode: 200,
       message: 'Email xác thực đã được gửi lại',
-      token, // Return token for EmailService to use
+      token, // Return token for testing
       userId: user.id,
       email: user.email,
     };
@@ -91,10 +139,26 @@ export class AuthController {
     // Generate reset token
     const token = this.authService.generateToken(user.id, user.email, 'password_reset');
 
+    // Build reset link - Note: For password reset, we might want to redirect to frontend with token
+    // since user needs to enter new password in a form
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+
+    // Send password reset email
+    try {
+      await this.emailService.sendPasswordResetEmail(
+        user.email,
+        user.fullName || user.username,
+        resetLink,
+      );
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+    }
+
     return {
       statusCode: 200,
       message: 'Link đặt lại mật khẩu đã được gửi đến email của bạn',
-      token, // Return token for EmailService to use
+      token, // Return token for testing
       userId: user.id,
       email: user.email,
     };
@@ -196,17 +260,32 @@ export class AuthController {
     // Generate magic link token
     const token = this.authService.generateToken(user.id, user.email, 'magic_link');
 
+    // Build magic link - point to API endpoint
+    const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+    const magicLink = `${baseUrl}/auth/magic-link/${token}`;
+
+    // Send magic link email
+    try {
+      await this.emailService.sendMagicLinkEmail(
+        user.email,
+        user.fullName || user.username,
+        magicLink,
+      );
+    } catch (error) {
+      console.error('Failed to send magic link email:', error);
+    }
+
     return {
       statusCode: 200,
       message: 'Magic link đã được gửi đến email của bạn',
-      token, // Return token for EmailService to use
+      token, // Return token for testing
       userId: user.id,
       email: user.email,
     };
   }
 
   /**
-   * Verify magic link and login
+   * Verify magic link and login (POST - for API calls)
    */
   @Post('magic-link/verify')
   @HttpCode(HttpStatus.OK)
@@ -235,6 +314,46 @@ export class AuthController {
   }
 
   /**
+   * Verify magic link and login (GET - for email links)
+   * User clicks magic link in email → directly logs in
+   */
+  @Get('magic-link/:token')
+  @HttpCode(HttpStatus.OK)
+  async verifyMagicLinkViaLink(@Req() req: Request, @Res() res: Response) {
+    try {
+      const token = req.params.token;
+      const user = await this.authService.verifyMagicLink(token);
+
+      // Generate access token
+      const accessToken = this.authService.generateAccessToken(user);
+
+      // Set httpOnly cookie with 7 days expiry
+      res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      });
+
+      const { passwordHash, ...userWithoutPassword } = user;
+
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'Đăng nhập thành công! Bạn đã được xác thực.',
+        user: userWithoutPassword,
+        accessToken,
+        success: true,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: error.message || 'Magic link không hợp lệ hoặc đã hết hạn',
+        success: false,
+      });
+    }
+  }
+
+  /**
    * Request OTP code
    */
   @Post('otp/request')
@@ -260,10 +379,21 @@ export class AuthController {
     // Store OTP
     this.authService.storeOTP(user.email, otp);
 
+    // Send OTP email
+    try {
+      await this.emailService.sendOTPEmail(
+        user.email,
+        user.fullName || user.username,
+        otp,
+      );
+    } catch (error) {
+      console.error('Failed to send OTP email:', error);
+    }
+
     return {
       statusCode: 200,
       message: 'OTP đã được gửi đến email của bạn',
-      otp, // Return OTP for EmailService to use (remove in production!)
+      otp, // Return OTP for testing (remove in production!)
       userId: user.id,
       email: user.email,
     };
