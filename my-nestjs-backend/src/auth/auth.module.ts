@@ -5,12 +5,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { DatabaseModule } from '../db/database.module';
+import { EmailModule } from '../email/email.module';
 import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
     DatabaseModule,
     ConfigModule,
+    EmailModule,
     PassportModule.register({ defaultStrategy: 'google' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
