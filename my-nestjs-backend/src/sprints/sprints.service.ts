@@ -7,12 +7,14 @@ import { sprints, projectMembers, sprintComments, Sprint, SprintComment } from '
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
 import { CreateSprintCommentDto } from './dto/create-sprint-comment.dto';
+import { NotificationHelperService } from '../notifications/notification-helper.service';
 import * as schema from '../db/schema';
 
 @Injectable()
 export class SprintsService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    private notificationHelper: NotificationHelperService,
   ) {}
 
   async create(createSprintDto: CreateSprintDto, userId: number): Promise<Sprint> {
@@ -31,6 +33,17 @@ export class SprintsService {
       .insert(sprints)
       .values(createSprintDto)
       .returning();
+
+    // Send notifications to project members
+    try {
+      await this.notificationHelper.notifySprintCreated(
+        sprint.projectId,
+        sprint.name,
+        userId
+      );
+    } catch (error) {
+      console.error('Failed to send sprint creation notification:', error);
+    }
 
     return sprint;
   }
