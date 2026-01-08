@@ -6,7 +6,12 @@ import {
   HttpStatus,
   NotFoundException,
   BadRequestException,
+  Get,
+  UseGuards,
+  Req,
+  Res,
 } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
@@ -15,6 +20,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RequestChangeEmailDto } from './dto/request-change-email.dto';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { OtpRequestDto, OtpVerifyDto } from './dto/otp-request.dto';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -204,17 +210,28 @@ export class AuthController {
    */
   @Post('magic-link/verify')
   @HttpCode(HttpStatus.OK)
-  async verifyMagicLink(@Body() verifyDto: VerifyEmailDto) {
+  async verifyMagicLink(@Body() verifyDto: VerifyEmailDto, @Res() res: Response) {
     const user = await this.authService.verifyMagicLink(verifyDto.token);
+
+    // Generate access token
+    const accessToken = this.authService.generateAccessToken(user);
+
+    // Set httpOnly cookie with 7 days expiry
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    });
 
     const { passwordHash, ...userWithoutPassword } = user;
 
-    return {
+    return res.status(200).json({
       statusCode: 200,
       message: 'Đăng nhập thành công',
       user: userWithoutPassword,
-      // TODO: Return access token for authenticated requests
-    };
+      accessToken, // Also return in body for testing
+    });
   }
 
   /**
@@ -257,16 +274,89 @@ export class AuthController {
    */
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
-  async verifyOTP(@Body() verifyDto: OtpVerifyDto) {
+  async verifyOTP(@Body() verifyDto: OtpVerifyDto, @Res() res: Response) {
     const user = await this.authService.verifyOTP(verifyDto.email, verifyDto.otp);
+
+    // Generate access token
+    const accessToken = this.authService.generateAccessToken(user);
+
+    // Set httpOnly cookie with 7 days expiry
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    });
 
     const { passwordHash, ...userWithoutPassword } = user;
 
-    return {
+    return res.status(200).json({
       statusCode: 200,
       message: 'Đăng nhập thành công với OTP',
       user: userWithoutPassword,
-      // TODO: Return access token for authenticated requests
-    };
+      accessToken, // Also return in body for testing
+    });
+  }
+
+  /**
+   * Google OAuth - Initiate authentication
+   */
+  @Get('google')
+  @UseGuards(GoogleOAuthGuard)
+  async googleAuth(@Req() req: Request) {
+    // Guard redirects to Google
+  }
+
+  /**
+   * Google OAuth - Callback URL
+   */
+  @Get('google/callback')
+  @UseGuards(GoogleOAuthGuard)
+  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
+    try {
+      // Validate and get/create user from Google profile
+      const user = await this.authService.validateGoogleUser(req.user as any);
+
+      // Generate access token
+      const accessToken = this.authService.generateAccessToken(user);
+
+      // Set httpOnly cookie with 7 days expiry
+      res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      });
+
+      // Remove sensitive data
+      const { passwordHash, googleId, ...userWithoutSensitiveData } = user;
+
+      // Return success response
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'Đăng nhập Google thành công',
+        user: userWithoutSensitiveData,
+        accessToken, // Also return in body for testing (can be removed in production)
+      });
+    } catch (error) {
+      return res.status(500).json({
+        statusCode: 500,
+        message: 'Đăng nhập Google thất bại',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Logout - Clear cookie
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Res() res: Response) {
+    res.clearCookie('access_token');
+    return res.status(200).json({
+      statusCode: 200,
+      message: 'Đăng xuất thành công',
+    });
   }
 }

@@ -20,7 +20,8 @@ export type TokenType =
   | 'password_reset'
   | 'email_change'
   | 'magic_link'
-  | 'otp';
+  | 'otp'
+  | 'access_token';
 
 // Token payload interface
 export interface TokenPayload {
@@ -71,6 +72,9 @@ export class AuthService {
         break;
       case 'otp':
         expiresIn = '10m'; // OTP có thời hạn rất ngắn
+        break;
+      case 'access_token':
+        expiresIn = '7d'; // Access token có thời hạn 7 ngày
         break;
       default:
         expiresIn = '1h';
@@ -352,5 +356,87 @@ export class AuthService {
       .where(eq(users.id, userId));
 
     return user;
+  }
+
+  /**
+   * Generate access token for authenticated user (7 days expiry)
+   */
+  generateAccessToken(user: User): string {
+    return this.generateToken(user.id, user.email, 'access_token');
+  }
+
+  /**
+   * Validate or create user from Google profile
+   */
+  async validateGoogleUser(googleProfile: {
+    googleId: string;
+    email: string;
+    fullName: string;
+    avatarUrl?: string;
+    provider: string;
+  }): Promise<User> {
+    // Check if user already exists with Google ID
+    const [existingUser] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.googleId, googleProfile.googleId));
+
+    if (existingUser) {
+      // Update last login
+      await this.db
+        .update(users)
+        .set({
+          lastLoginAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser.id));
+
+      return existingUser;
+    }
+
+    // Check if user exists with the same email (link accounts)
+    const [userWithEmail] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, googleProfile.email));
+
+    if (userWithEmail) {
+      // Link Google account to existing user
+      const [updatedUser] = await this.db
+        .update(users)
+        .set({
+          googleId: googleProfile.googleId,
+          provider: 'google', // Update provider to google
+          status: 'active', // Auto-activate since Google email is verified
+          emailVerifiedAt: userWithEmail.emailVerifiedAt || new Date(),
+          lastLoginAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userWithEmail.id))
+        .returning();
+
+      return updatedUser;
+    }
+
+    // Create new user from Google profile
+    // Generate username from email
+    const username = googleProfile.email.split('@')[0] + '_' + Math.random().toString(36).substring(7);
+
+    const [newUser] = await this.db
+      .insert(users)
+      .values({
+        googleId: googleProfile.googleId,
+        email: googleProfile.email,
+        username: username,
+        fullName: googleProfile.fullName,
+        avatarUrl: googleProfile.avatarUrl,
+        provider: 'google',
+        status: 'active', // Auto-activate for Google users
+        emailVerifiedAt: new Date(), // Google email is already verified
+        lastLoginAt: new Date(),
+      })
+      .returning();
+
+    return newUser;
   }
 }
