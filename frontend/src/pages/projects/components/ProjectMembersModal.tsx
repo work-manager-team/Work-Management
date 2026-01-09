@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { X, User, UserPlus, Trash2, Check } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Check, Filter } from 'lucide-react';
 import projectService, { ProjectMember, User as UserType } from '../../../services/user/project.service';
 import './ProjectMembersModal.css';
 import authService from '../../../services/user/auth.service';
@@ -41,7 +41,10 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   const [roleDropdownUserId, setRoleDropdownUserId] = useState<number | null>(null);
   const [pendingRoleChanges, setPendingRoleChanges] = useState<Map<number, RoleChange>>(new Map());
   const [savingRoles, setSavingRoles] = useState(false);
-
+  // State cho filter member
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active'>('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   // Ref cho dropdown (để close khi click outside)
   const dropdownRef = useRef<HTMLDivElement>(null);
   // các role có thể chọn
@@ -57,18 +60,35 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       setRoleDropdownUserId(null);
     }
   };
-
+  
   if (roleDropdownUserId !== null) {
     document.addEventListener('mousedown', handleClickOutside);
   }
-
   return () => {
     document.removeEventListener('mousedown', handleClickOutside);
   };
   }, [roleDropdownUserId]);
+
+  // close dropdown filter
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilterDropdown]);
+
   
 
-  const fetchMembers = async () => {
+  const fetchMembers = async (status: 'all' | 'active' = filterStatus) => {
     setLoading(true);
     setError(null);
 
@@ -85,7 +105,27 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       setCurrentUserId(currentUser.id);
 
       // Fetch project members
-      const projectMembers = await projectService.getProjectMembers(projectId);
+      let projectMembers: ProjectMember[];
+      if (status === 'active') {
+        const response = await fetch(
+        `https://work-management-chi.vercel.app/projects/${projectId}/members/active`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch active members');
+      }
+      
+      projectMembers = await response.json();
+      }
+      else {
+        projectMembers = await projectService.getProjectMembers(projectId);
+      }
       
       // Find current user's role in the project
       const currentMember = projectMembers.find(m => m.userId === currentUser.id);
@@ -347,6 +387,13 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   const getCurrentRole = (member: MemberWithDetails): string => {
     return member.role; // Already updated in state
   };
+
+  // handle filter member
+  const handleFilterChange = async (status: 'all' | 'active') => {
+    setFilterStatus(status);
+    setShowFilterDropdown(false);
+    await fetchMembers(status);
+  };
   return (
     <>
     <div className="modal-overlay" onClick={onClose}>
@@ -378,6 +425,39 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
                   </button>
                 </>
               )}
+
+              {/*button filter member*/}
+              {!loading && (
+              <div className="filter-container" ref={filterDropdownRef}>
+                <button
+                  className="filter-button"
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  title="Filter Members"
+                >
+                  <Filter size={20} />
+                  <span className="filter-label">{filterStatus === 'all' ? 'All' : 'Active'}</span>
+                </button>
+                
+                {showFilterDropdown && (
+                  <div className="filter-dropdown">
+                    <div
+                      className={`filter-option ${filterStatus === 'all' ? 'selected' : ''}`}
+                      onClick={() => handleFilterChange('all')}
+                    >
+                      <span>All</span>
+                      {filterStatus === 'all' && <Check size={16} className="check-icon" />}
+                    </div>
+                    <div
+                      className={`filter-option ${filterStatus === 'active' ? 'selected' : ''}`}
+                      onClick={() => handleFilterChange('active')}
+                    >
+                      <span>Active</span>
+                      {filterStatus === 'active' && <Check size={16} className="check-icon" />}
+                    </div>
+                  </div>
+                )}
+              </div>
+              )}
               {canAddMembers && !loading && (
                 <button
                   className="add-member-button"
@@ -403,7 +483,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
           ) : error ? (
             <div className="error-container">
               <p className="error-message">{error}</p>
-              <button onClick={fetchMembers} className="retry-button">
+              <button onClick={() => fetchMembers()} className="retry-button">
                 Try Again
               </button>
             </div>

@@ -390,3 +390,26 @@
     grid-template-columns: 1fr;
   }
 }
+/* Project Settings Button */
+.project-settings-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.project-settings-button:hover {
+  background-color: #e8e8e8;
+  border-color: #d0d0d0;
+  color: #333;
+}
+
+.project-settings-button:active {
+  transform: scale(0.98);
+}

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Users, BarChart3, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, BarChart3, CheckCircle2, Clock, Settings } from 'lucide-react';
 import projectService, { ProjectDetails } from '../../services/user/project.service';
 import './ProjectDetailsPage.css';
+import ProjectSettingsModal from './components/ProjectSettingsModal';
 
 const ProjectDetailsPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -11,6 +12,7 @@ const ProjectDetailsPage: React.FC = () => {
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     if (projectId) {
@@ -89,7 +91,14 @@ const ProjectDetailsPage: React.FC = () => {
   }
 
   const progress = calculateProgress();
+  const handleUpdateProject = (updatedProject: ProjectDetails) => {
+  setProject(updatedProject);
+  fetchProjectDetails(); // Refresh data
+  };
 
+  const handleDeleteProject = () => {
+    navigate('/projects'); // Navigate back to projects list after delete
+  };
   return (
     <div className="project-details-page">
       {/* Header */}
@@ -109,11 +118,21 @@ const ProjectDetailsPage: React.FC = () => {
           </div>
           <div className="project-badges">
             <span className={`status-badge ${getStatusColor(project.status)}`}>
-              {project.status}
+              {project.status
+              .split('_')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ')}
             </span>
             <span className={`visibility-badge ${getVisibilityColor(project.visibility)}`}>
               {project.visibility}
             </span>
+            <button 
+              className="project-settings-button"
+              onClick={() => setShowSettingsModal(true)}
+              title="Project Settings"
+            >
+              <Settings size={18} />
+            </button>
           </div>
         </div>
 
@@ -226,6 +245,16 @@ const ProjectDetailsPage: React.FC = () => {
             <span className="info-value">{project.ownerId}</span>
           </div>
         </div>
+
+        {/* Project Settings Modal */}
+        {showSettingsModal && (
+          <ProjectSettingsModal
+            project={project}
+            onClose={() => setShowSettingsModal(false)}
+            onUpdate={handleUpdateProject}
+            onDelete={handleDeleteProject}
+          />
+        )}
       </div>
     </div>
   );

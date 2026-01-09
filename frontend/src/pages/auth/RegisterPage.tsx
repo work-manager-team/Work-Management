@@ -115,11 +115,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
     navigate('/login');
   };
 
-  const handleSocialLogin = (provider: string) => {
-    // TODO: Implement social login
-    alert(`${provider} login coming soon!`);
-  };
-
+  
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center p-4">
@@ -257,24 +253,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
               </button>
             </div>
           </div>
-          {/* AvatarUrl */}
-          <div>
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Avatar
-            </label>
-            <div className="relative">
-              <input
-                type={'url'}
-                name="avatarUrl"
-                value={formData.avatarUrl}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                placeholder="Link Avatar"
-                disabled={loading}
-              />
-              
-            </div>
-          </div>
+          
 
           {/* Submit Button */}
           <button
