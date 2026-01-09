@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, Plus } from 'lucide-react';
+import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X } from 'lucide-react';
 import Layout from './Layout';
 
 interface Sprint {
@@ -37,6 +37,15 @@ interface BoardColumn {
     tasks: Task[];
 }
 
+interface Comment {
+    id: string;
+    taskId: string;
+    userId: string;
+    content: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 interface BoardsPageProps {
     onLogout: () => void;
 }
@@ -51,12 +60,20 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const [loading, setLoading] = useState(true);
     const [showAddTaskModal, setShowAddTaskModal] = useState(false);
     const [selectedColumnId, setSelectedColumnId] = useState<string>('');
+    const [openProjectDropdown, setOpenProjectDropdown] = useState(false);
+    const [openSprintDropdown, setOpenSprintDropdown] = useState(false);
     const [taskForm, setTaskForm] = useState({
         title: '',
         description: '',
         priority: 'medium' as 'high' | 'medium' | 'low',
         assigneeId: ''
     });
+    const [showCommentModal, setShowCommentModal] = useState(false);
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [newComment, setNewComment] = useState('');
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editingCommentContent, setEditingCommentContent] = useState('');
     const [columns, setColumns] = useState<BoardColumn[]>([
         { id: 'todo', title: 'TO DO', tasks: [] },
         { id: 'in_progress', title: 'IN PROGRESS', tasks: [] },
@@ -126,10 +143,16 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
             // Auto-select first sprint if available
             if (sprintsData.length > 0) {
                 setSelectedSprint(sprintsData[0].id);
+            } else {
+                // Clear selected sprint and tasks if no sprints available
+                setSelectedSprint('');
+                setColumns(columns.map(col => ({ ...col, tasks: [] })));
             }
         } catch (error) {
             console.error('Error fetching sprints:', error);
             setSprints([]);
+            setSelectedSprint('');
+            setColumns(columns.map(col => ({ ...col, tasks: [] })));
         } finally {
             setLoading(false);
         }
@@ -312,6 +335,107 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
         setShowAddTaskModal(true);
     };
 
+    const fetchComments = async (taskId: string) => {
+        try {
+            const response = await fetch(`https://work-management-chi.vercel.app/comments?taskId=${taskId}`);
+            const data = await response.json();
+            setComments(Array.isArray(data) ? data : data.data || []);
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            setComments([]);
+        }
+    };
+
+    const createComment = async () => {
+        if (!newComment.trim() || !selectedTask) return;
+
+        try {
+            const response = await fetch('https://work-management-chi.vercel.app/comments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    taskId: selectedTask.id,
+                    content: newComment
+                })
+            });
+
+            if (response.ok) {
+                setNewComment('');
+                fetchComments(selectedTask.id);
+            }
+        } catch (error) {
+            console.error('Error creating comment:', error);
+        }
+    };
+
+    const updateComment = async (commentId: string) => {
+        if (!editingCommentContent.trim()) return;
+
+        try {
+            const response = await fetch(`https://work-management-chi.vercel.app/comments/${commentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: editingCommentContent
+                })
+            });
+
+            if (response.ok) {
+                setEditingCommentId(null);
+                setEditingCommentContent('');
+                if (selectedTask) {
+                    fetchComments(selectedTask.id);
+                }
+            }
+        } catch (error) {
+            console.error('Error updating comment:', error);
+        }
+    };
+
+    const deleteComment = async (commentId: string) => {
+        try {
+            const response = await fetch(`https://work-management-chi.vercel.app/comments/${commentId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                if (selectedTask) {
+                    fetchComments(selectedTask.id);
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+        }
+    };
+
+    const openCommentModal = (task: Task) => {
+        setSelectedTask(task);
+        setShowCommentModal(true);
+        fetchComments(task.id);
+    };
+
+    const deleteTask = async (taskId: string) => {
+        if (!window.confirm('Are you sure you want to delete this task?')) return;
+
+        try {
+            const response = await fetch(`https://work-management-chi.vercel.app/tasks/${taskId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                if (selectedSprint) {
+                    fetchTasks(selectedSprint);
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error);
+        }
+    };
+
     return (
         <Layout onLogout={onLogout}>
             <div className="h-full flex flex-col">
@@ -321,50 +445,66 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                         {/* Project and Sprint Selector */}
                         <div className="flex items-center gap-3">
                             {/* Project Selector */}
-                            <div className="flex items-center gap-2 relative group">
-                                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            <div className="relative">
+                                <button
+                                    onClick={() => setOpenProjectDropdown(!openProjectDropdown)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                                >
                                     <span className="text-sm font-medium text-gray-700">
                                         {selectedProject && projects.find(p => p.id === selectedProject)?.name || 'Select Project'}
                                     </span>
                                     <ChevronDown size={16} className="text-gray-600" />
                                 </button>
-                                <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-40 hidden group-hover:block max-h-60 overflow-y-auto">
-                                    {projects.length === 0 ? (
-                                        <div className="px-4 py-2 text-gray-500 text-sm">No projects available</div>
-                                    ) : (
-                                        projects.map(project => (
-                                            <button
-                                                key={project.id}
-                                                onClick={() => setSelectedProject(project.id)}
-                                                className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${selectedProject === project.id ? 'bg-purple-50 text-purple-600' : 'text-gray-700'}`}
-                                            >
-                                                {project.name}
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
+                                {openProjectDropdown && (
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                                        {projects.length === 0 ? (
+                                            <div className="px-4 py-2 text-gray-500 text-sm">No projects available</div>
+                                        ) : (
+                                            projects.map(project => (
+                                                <button
+                                                    key={project.id}
+                                                    onClick={() => {
+                                                        setSelectedProject(project.id);
+                                                        setOpenProjectDropdown(false);
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${selectedProject === project.id ? 'bg-purple-50 text-purple-600' : 'text-gray-700'}`}
+                                                >
+                                                    {project.name}
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Sprint Selector */}
                             {sprints.length > 0 && (
-                                <div className="flex items-center gap-2 relative group">
-                                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setOpenSprintDropdown(!openSprintDropdown)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                                    >
                                         <span className="text-sm font-medium text-gray-700">
                                             {selectedSprint && sprints.find(s => s.id === selectedSprint)?.name || 'Select Sprint'}
                                         </span>
                                         <ChevronDown size={16} className="text-gray-600" />
                                     </button>
-                                    <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-40 hidden group-hover:block max-h-60 overflow-y-auto">
-                                        {sprints.map(sprint => (
-                                            <button
-                                                key={sprint.id}
-                                                onClick={() => setSelectedSprint(sprint.id)}
-                                                className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${selectedSprint === sprint.id ? 'bg-purple-50 text-purple-600' : 'text-gray-700'}`}
-                                            >
-                                                {sprint.name}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    {openSprintDropdown && (
+                                        <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                                            {sprints.map(sprint => (
+                                                <button
+                                                    key={sprint.id}
+                                                    onClick={() => {
+                                                        setSelectedSprint(sprint.id);
+                                                        setOpenSprintDropdown(false);
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${selectedSprint === sprint.id ? 'bg-purple-50 text-purple-600' : 'text-gray-700'}`}
+                                                >
+                                                    {sprint.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -423,9 +563,20 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                                 onDragStart={() => handleDragStart(column.id, task.id)}
                                                 className="p-3 border border-gray-200 rounded-lg hover:shadow-md transition bg-white cursor-grab active:cursor-grabbing"
                                             >
-                                                <h4 className="text-sm font-medium text-gray-800 mb-2">
-                                                    {task.title}
-                                                </h4>
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h4 className="text-sm font-medium text-gray-800 flex-1">
+                                                        {task.title}
+                                                    </h4>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            deleteTask(task.id);
+                                                        }}
+                                                        className="text-gray-400 hover:text-red-600 transition"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                                 <p className="text-xs text-gray-600 mb-2">
                                                     {task.description}
                                                 </p>
@@ -439,6 +590,13 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                                         </div>
                                                     )}
                                                 </div>
+                                                <button
+                                                    onClick={() => openCommentModal(task)}
+                                                    className="mt-3 w-full flex items-center justify-center gap-2 py-1 text-xs text-gray-600 hover:text-purple-600 border border-gray-200 rounded hover:border-purple-300 transition"
+                                                >
+                                                    <MessageCircle size={14} />
+                                                    <span>Comment</span>
+                                                </button>
                                             </div>
                                         ))}
                                         {column.tasks.length === 0 && (
@@ -543,6 +701,106 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                     className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
                                 >
                                     Create Task
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Comments Modal */}
+                {showCommentModal && selectedTask && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-96 flex flex-col">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-800">Comments</h2>
+                                    <p className="text-sm text-gray-600">{selectedTask.title}</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowCommentModal(false)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Comments List */}
+                            <div className="flex-1 overflow-y-auto mb-4 space-y-3 border border-gray-200 rounded-lg p-3">
+                                {comments.length === 0 ? (
+                                    <div className="text-center text-gray-500 text-sm py-4">
+                                        No comments yet
+                                    </div>
+                                ) : (
+                                    comments.map(comment => (
+                                        <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
+                                            {editingCommentId === comment.id ? (
+                                                <div className="space-y-2">
+                                                    <textarea
+                                                        value={editingCommentContent}
+                                                        onChange={(e) => setEditingCommentContent(e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                        rows={2}
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => updateComment(comment.id)}
+                                                            className="flex-1 px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingCommentId(null)}
+                                                            className="flex-1 px-2 py-1 border border-gray-300 text-xs rounded hover:bg-gray-100 transition"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-sm text-gray-800">{comment.content}</p>
+                                                    <div className="flex items-center justify-between mt-2">
+                                                        <span className="text-xs text-gray-500">By {comment.userId}</span>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingCommentId(comment.id);
+                                                                    setEditingCommentContent(comment.content);
+                                                                }}
+                                                                className="text-gray-500 hover:text-purple-600 transition"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => deleteComment(comment.id)}
+                                                                className="text-gray-500 hover:text-red-600 transition"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Add Comment */}
+                            <div className="space-y-2">
+                                <textarea
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Write a comment..."
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                                    rows={2}
+                                />
+                                <button
+                                    onClick={createComment}
+                                    disabled={!newComment.trim()}
+                                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    Post Comment
                                 </button>
                             </div>
                         </div>
