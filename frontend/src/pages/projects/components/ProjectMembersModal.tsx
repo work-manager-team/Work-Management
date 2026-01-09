@@ -200,7 +200,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     setError(null);
     try {
       const response = await fetch(
-        `http://localhost:3000/projects/${projectId}/members/${userId}`,
+        `https://work-management-chi.vercel.app/projects/${projectId}/members/${userId}`,
         {
           method: 'DELETE',
           headers: {
@@ -294,7 +294,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     for (const [userId, change] of pendingRoleChanges) {
       try {
         const response = await fetch(
-          `http://localhost:3000/projects/${projectId}/members/${userId}/role`,
+          `https://work-management-chi.vercel.app/projects/${projectId}/members/${userId}/role`,
           {
             method: 'PATCH',
             headers: {

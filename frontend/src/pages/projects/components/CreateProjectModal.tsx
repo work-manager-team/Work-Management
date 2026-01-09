@@ -73,7 +73,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/projects', {
+      const response = await fetch('https://work-management-chi.vercel.app/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
       const currentUserId = user ? JSON.parse(user).id : null;
 
       if (currentUserId) {
-        const addMemberResponse = await fetch(`http://localhost:3000/projects/${projectId}/members`, {
+        const addMemberResponse = await fetch(`https://work-management-chi.vercel.app/projects/${projectId}/members`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
           // Có thể throw error hoặc tiếp tục tùy yêu cầu
         }
         //cập nhật status của người tạo project thành active (đã tham gia)
-        const updateStatus = await fetch(`http://localhost:3000/projects/${projectId}/members/${currentUserId}/accept`, {
+        const updateStatus = await fetch(`https://work-management-chi.vercel.app/projects/${projectId}/members/${currentUserId}/accept`, {
           method: 'PATCH',
           
         });

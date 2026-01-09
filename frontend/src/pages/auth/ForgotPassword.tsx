@@ -26,7 +26,7 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/forgot-password', {
+      const response = await fetch('https://work-management-chi.vercel.app/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ const ForgotPassword: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3000/auth/reset-password', {
+      const response = await fetch('https://work-management-chi.vercel.app/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

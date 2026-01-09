@@ -42,7 +42,7 @@ const VerifyEmail = () => {
     try {
       console.log('📤 Calling verify API...');
       
-      const response = await fetch('http://localhost:3000/auth/verify-email', {
+      const response = await fetch('https://work-management-chi.vercel.app/auth/verify-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ const VerifyEmail = () => {
     try {
       console.log('📤 Resending verification email to:', resendEmail);
       
-      const response = await fetch('http://localhost:3000/auth/resend-verification', {
+      const response = await fetch('https://work-management-chi.vercel.app/auth/resend-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

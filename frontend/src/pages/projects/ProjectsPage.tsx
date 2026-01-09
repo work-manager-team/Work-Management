@@ -63,7 +63,7 @@ const ProjectsPage = () => {
   
   const getCountProjects = async (): Promise<number> => {
     try {
-      const response = await fetch('http://localhost:3000/projects/count', {
+      const response = await fetch('https://work-management-chi.vercel.app/projects/count', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
