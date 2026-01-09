@@ -6,12 +6,14 @@ import { DRIZZLE } from '../db/database.module';
 import { projectMembers, projects, users, ProjectMember } from '../db/schema';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { NotificationHelperService } from '../notifications/notification-helper.service';
 import * as schema from '../db/schema';
 
 @Injectable()
 export class ProjectMembersService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    private notificationHelper: NotificationHelperService,
   ) {}
 
   async addMember(
@@ -135,6 +137,12 @@ export class ProjectMembersService {
       throw new NotFoundException('Lời mời không tồn tại');
     }
 
+    // Get project info for notification
+    const [project] = await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId));
+
     const [updated] = await this.db
       .update(projectMembers)
       .set({
@@ -143,6 +151,17 @@ export class ProjectMembersService {
       })
       .where(eq(projectMembers.id, member.id))
       .returning();
+
+    // Send notification to user
+    try {
+      await this.notificationHelper.notifyUserAddedToProject(
+        userId,
+        projectId,
+        project.name,
+      );
+    } catch (error) {
+      console.error('Failed to send member added notification:', error);
+    }
 
     return updated;
   }

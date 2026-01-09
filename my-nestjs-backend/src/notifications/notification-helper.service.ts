@@ -110,4 +110,137 @@ export class NotificationHelperService {
       );
     }
   }
+
+  async notifyTaskStatusChanged(
+    projectId: number,
+    taskId: number,
+    taskTitle: string,
+    oldStatus: string,
+    newStatus: string,
+    changedByUserId: number,
+    assigneeId?: number,
+  ): Promise<void> {
+    const statusMap: Record<string, string> = {
+      'todo': 'Cần làm',
+      'in_progress': 'Đang làm',
+      'done': 'Hoàn thành',
+      'not_completed': 'Chưa hoàn thành',
+    };
+
+    // Notify assignee if exists and different from changer
+    if (assigneeId && assigneeId !== changedByUserId) {
+      await this.notifyUser(
+        assigneeId,
+        'task_status_changed',
+        'Task của bạn được cập nhật trạng thái',
+        `Task "${taskTitle}" đã chuyển từ "${statusMap[oldStatus] || oldStatus}" sang "${statusMap[newStatus] || newStatus}"`,
+        taskId,
+        projectId,
+      );
+    }
+  }
+
+  async notifyTaskDeleted(
+    projectId: number,
+    taskTitle: string,
+    deletedByUserId: number,
+    assigneeId?: number,
+    reporterId?: number,
+  ): Promise<void> {
+    const usersToNotify = new Set<number>();
+
+    if (assigneeId && assigneeId !== deletedByUserId) {
+      usersToNotify.add(assigneeId);
+    }
+
+    if (reporterId && reporterId !== deletedByUserId) {
+      usersToNotify.add(reporterId);
+    }
+
+    const notificationPromises = Array.from(usersToNotify).map((userId) =>
+      this.notifyUser(
+        userId,
+        'task_deleted',
+        'Task đã bị xóa',
+        `Task "${taskTitle}" đã bị xóa khỏi dự án`,
+        undefined,
+        projectId,
+      ),
+    );
+
+    await Promise.all(notificationPromises);
+  }
+
+  async notifySprintStatusChanged(
+    projectId: number,
+    sprintName: string,
+    oldStatus: string,
+    newStatus: string,
+    changedByUserId: number,
+  ): Promise<void> {
+    const statusMap: Record<string, string> = {
+      'planned': 'Lên kế hoạch',
+      'active': 'Đang hoạt động',
+      'completed': 'Hoàn thành',
+      'cancelled': 'Đã hủy',
+    };
+
+    await this.notifyProjectMembers(
+      projectId,
+      changedByUserId,
+      'sprint_status_changed',
+      'Sprint được cập nhật trạng thái',
+      `Sprint "${sprintName}" đã chuyển từ "${statusMap[oldStatus] || oldStatus}" sang "${statusMap[newStatus] || newStatus}"`,
+      undefined,
+    );
+  }
+
+  async notifySprintDeleted(
+    projectId: number,
+    sprintName: string,
+    deletedByUserId: number,
+  ): Promise<void> {
+    await this.notifyProjectMembers(
+      projectId,
+      deletedByUserId,
+      'sprint_deleted',
+      'Sprint đã bị xóa',
+      `Sprint "${sprintName}" đã bị xóa khỏi dự án`,
+      undefined,
+    );
+  }
+
+  async notifyCommentAdded(
+    projectId: number,
+    taskId: number,
+    taskTitle: string,
+    commentedByUserId: number,
+    assigneeId?: number,
+    reporterId?: number,
+  ): Promise<void> {
+    const usersToNotify = new Set<number>();
+
+    // Notify assignee
+    if (assigneeId && assigneeId !== commentedByUserId) {
+      usersToNotify.add(assigneeId);
+    }
+
+    // Notify reporter
+    if (reporterId && reporterId !== commentedByUserId) {
+      usersToNotify.add(reporterId);
+    }
+
+    const notificationPromises = Array.from(usersToNotify).map((userId) =>
+      this.notifyUser(
+        userId,
+        'comment_added',
+        'Có comment mới trên task của bạn',
+        `Task "${taskTitle}" có comment mới`,
+        taskId,
+        projectId,
+      ),
+    );
+
+    await Promise.all(notificationPromises);
+  }
 }

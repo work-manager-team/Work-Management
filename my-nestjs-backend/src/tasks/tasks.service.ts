@@ -258,7 +258,28 @@ export class TasksService {
       throw new ForbiddenException('Chỉ admin hoặc người tạo task mới có thể xóa');
     }
 
+    // Store task info for notification before deletion
+    const taskInfo = {
+      title: task.title,
+      projectId: task.projectId,
+      assigneeId: task.assigneeId,
+      reporterId: task.reporterId,
+    };
+
     await this.db.delete(tasks).where(eq(tasks.id, id));
+
+    // Send notification after deletion
+    try {
+      await this.notificationHelper.notifyTaskDeleted(
+        taskInfo.projectId,
+        taskInfo.title,
+        userId,
+        taskInfo.assigneeId,
+        taskInfo.reporterId,
+      );
+    } catch (error) {
+      console.error('Failed to send task deletion notification:', error);
+    }
   }
 
   async updateStatus(
@@ -280,6 +301,8 @@ export class TasksService {
       throw new BadRequestException('Status không hợp lệ. Chỉ chấp nhận: todo, in_progress, done, not_completed');
     }
 
+    const oldStatus = task.status;
+
     const result = await this.db
       .update(tasks)
       .set({
@@ -289,7 +312,26 @@ export class TasksService {
       .where(eq(tasks.id, id))
       .returning();
 
-    return result[0];
+    const updatedTask = result[0];
+
+    // Send notification if status changed
+    if (oldStatus !== status) {
+      try {
+        await this.notificationHelper.notifyTaskStatusChanged(
+          updatedTask.projectId,
+          updatedTask.id,
+          updatedTask.title,
+          oldStatus,
+          status,
+          userId,
+          updatedTask.assigneeId,
+        );
+      } catch (error) {
+        console.error('Failed to send task status change notification:', error);
+      }
+    }
+
+    return updatedTask;
   }
 
   async assignTask(
