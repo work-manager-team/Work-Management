@@ -37,11 +37,11 @@ interface BoardColumn {
     tasks: Task[];
 }
 
-interface BoardsPageProps {
+/*interface BoardsPageProps {
     onLogout: () => void;
-}
+}*/
 
-const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
+const BoardsPage = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<string>('');
     const [selectedSprint, setSelectedSprint] = useState<string>('');

@@ -6,7 +6,8 @@ import {
   Users, 
   Calendar, 
   Bell, 
-  Settings 
+  Settings ,
+  ChartNoAxesCombined
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -18,7 +19,7 @@ const Sidebar: React.FC = () => {
     { path: '/projects', icon: Folder, label: 'Projects' },
     { path: '/boards', icon: Table, label: 'Boards' },
     { path: '/calendar', icon: Calendar, label: 'Calendar' },
-    { path: '/reports', icon: Bell, label: 'Reports' },
+    { path: '/reports', icon: ChartNoAxesCombined, label: 'Reports' },
     { path: '/notifications', icon: Bell, label: 'Notifications' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];

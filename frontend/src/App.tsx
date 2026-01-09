@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import { ThemeProvider } from './context/ThemeContext';
 // Import các page
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -10,12 +11,14 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import Dashboard from './pages/dashboard/Dashboard'
 import ProjectsPage from './pages/projects/ProjectsPage'
 import ProjectDetailsPage from './pages/projects/ProjectDetailsPage';
-//import Calendar from './pages/calendar/Calendar';
+import CalendarPage from './pages/calendar/CalendarPage';
 //import Table from './pages/table/Table';
 import BoardsPage from './pages/boards/BoardsPage';
-
+import NotificationsPage from './pages/notifications/NotificationsPage';
+import ReportsPage from './pages/reports/ReportsPage';
 import ProtectedRoute from './components/ProtectedRoute';
-
+import SettingsPage from './pages/settings/SettingsPage';
+import UserProfilePage from './pages/profile/UserProfilePage';
 // Services
 import userAuthService from './services/user/auth.service';
 
@@ -52,6 +55,7 @@ function App() {
     return <div>Loading...</div>;
   }
  return (
+  <ThemeProvider>
     <BrowserRouter>
       <Routes>
         {/*Public routes*/}
@@ -81,11 +85,12 @@ function App() {
 
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
-          <Route path="/boards" element={<BoardsPage onLogout={handleLogout} />} />
-          <Route path="/reports" element={<div>Reports Page</div>} />
-          <Route path="/notifications" element={<div>Notifications Page</div>} />
-          <Route path="/settings" element={<div>Settings Page</div>} />
-          <Route path="/profile" element={<div>Profile Page</div>} />
+          <Route path="/boards" element={<BoardsPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<UserProfilePage onLogout={handleLogout} />} />
                       {/* 404 - Redirect to dashboard */}
                       //<Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
@@ -95,6 +100,7 @@ function App() {
           />
       </Routes>
     </BrowserRouter>
+  </ThemeProvider>
   ); 
 }
 
