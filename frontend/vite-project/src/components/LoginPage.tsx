@@ -11,6 +11,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
 
   const handleSubmit = async () => {
     if (isLogin) {
@@ -50,8 +51,79 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       }
     } else {
       // Đăng ký (Register)
-      console.log("Register:", { username, email, password });
-      setIsLogin(true);
+      try {
+        // Gọi API đăng ký
+        const registerResponse = await fetch(
+          "https://work-management-chi.vercel.app/users",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: email,
+              username: username,
+              password: password,
+              fullName: fullName || "Test User",
+            }),
+          }
+        );
+
+        const registerData = await registerResponse.json();
+
+        if (registerResponse.ok) {
+          console.log("Register success:", registerData);
+
+          // Gọi API xác thực email
+          try {
+            const verifyResponse = await fetch(
+              "https://work-management-chi.vercel.app/auth/resend-verification",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  email: email,
+                }),
+              }
+            );
+
+            const verifyData = await verifyResponse.json();
+
+            if (verifyResponse.ok) {
+              console.log("Verification email sent:", verifyData);
+              alert("Registration successful! Please check your email to verify your account.");
+              setUsername('');
+              setEmail('');
+              setPassword('');
+              setFullName('');
+              setIsLogin(true);
+            } else {
+              console.warn("Verification email could not be sent:", verifyData);
+              alert("Registration successful! Please check your email to verify your account.");
+              setUsername('');
+              setEmail('');
+              setPassword('');
+              setFullName('');
+              setIsLogin(true);
+            }
+          } catch (verifyError) {
+            console.error("Verification error:", verifyError);
+            alert("Registration successful! Please check your email to verify your account.");
+            setUsername('');
+            setEmail('');
+            setPassword('');
+            setFullName('');
+            setIsLogin(true);
+          }
+        } else {
+          alert(registerData.message || "Registration failed");
+        }
+      } catch (error) {
+        console.error("Register error:", error);
+        alert("An error occurred during registration. Please try again.");
+      }
     }
   };
 
@@ -94,6 +166,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                 placeholder="Enter your email"
+              />
+            </div>
+          )}
+
+          {/* Full Name (chỉ hiển thị khi Register) */}
+          {!isLogin && (
+            <div>
+              <label className="block text-gray-700 text-sm font-medium mb-2">
+                Full Name:
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                placeholder="Enter your full name"
               />
             </div>
           )}
