@@ -103,7 +103,24 @@ export class SprintsService {
       throw new ForbiddenException('Bạn không có quyền xóa sprint này');
     }
 
+    // Store sprint info for notification before deletion
+    const sprintInfo = {
+      name: sprint.name,
+      projectId: sprint.projectId,
+    };
+
     await this.db.delete(sprints).where(eq(sprints.id, id));
+
+    // Send notification after deletion
+    try {
+      await this.notificationHelper.notifySprintDeleted(
+        sprintInfo.projectId,
+        sprintInfo.name,
+        userId,
+      );
+    } catch (error) {
+      console.error('Failed to send sprint deletion notification:', error);
+    }
   }
 
   async startSprint(id: number, userId: number): Promise<Sprint> {
@@ -118,11 +135,26 @@ export class SprintsService {
       throw new ForbiddenException('Bạn không có quyền start sprint');
     }
 
+    const oldStatus = sprint.status;
+
     const [updated] = await this.db
       .update(sprints)
       .set({ status: 'active', updatedAt: new Date() })
       .where(eq(sprints.id, id))
       .returning();
+
+    // Send notification
+    try {
+      await this.notificationHelper.notifySprintStatusChanged(
+        updated.projectId,
+        updated.name,
+        oldStatus,
+        'active',
+        userId,
+      );
+    } catch (error) {
+      console.error('Failed to send sprint status change notification:', error);
+    }
 
     return updated;
   }
@@ -139,11 +171,26 @@ export class SprintsService {
       throw new ForbiddenException('Bạn không có quyền complete sprint');
     }
 
+    const oldStatus = sprint.status;
+
     const [updated] = await this.db
       .update(sprints)
       .set({ status: 'completed', updatedAt: new Date() })
       .where(eq(sprints.id, id))
       .returning();
+
+    // Send notification
+    try {
+      await this.notificationHelper.notifySprintStatusChanged(
+        updated.projectId,
+        updated.name,
+        oldStatus,
+        'completed',
+        userId,
+      );
+    } catch (error) {
+      console.error('Failed to send sprint status change notification:', error);
+    }
 
     return updated;
   }

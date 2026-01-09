@@ -1,9 +1,9 @@
 // src/comments/comments.service.ts
-import { 
-  Injectable, 
-  Inject, 
-  NotFoundException, 
-  ForbiddenException 
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException
 } from '@nestjs/common';
 import { eq, and, isNull } from 'drizzle-orm';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
@@ -11,12 +11,14 @@ import { DRIZZLE } from '../db/database.module';
 import { comments, tasks, projectMembers, Comment } from '../db/schema';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { NotificationHelperService } from '../notifications/notification-helper.service';
 import * as schema from '../db/schema';
 
 @Injectable()
 export class CommentsService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    private notificationHelper: NotificationHelperService,
   ) {}
 
   async create(createCommentDto: CreateCommentDto, userId: number): Promise<Comment> {
@@ -66,7 +68,23 @@ export class CommentsService {
       })
       .returning();
 
-    return result[0];
+    const createdComment = result[0];
+
+    // Send notification to task's assignee and reporter
+    try {
+      await this.notificationHelper.notifyCommentAdded(
+        task.projectId,
+        task.id,
+        task.title,
+        userId,
+        task.assigneeId,
+        task.reporterId,
+      );
+    } catch (error) {
+      console.error('Failed to send comment notification:', error);
+    }
+
+    return createdComment;
   }
 
   async findByTask(taskId: number, userId: number): Promise<Comment[]> {
