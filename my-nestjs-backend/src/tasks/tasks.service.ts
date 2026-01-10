@@ -421,6 +421,35 @@ export class TasksService {
       .orderBy(desc(tasks.createdAt));
   }
 
+  async getTaskAssignee(taskId: number, userId: number): Promise<any> {
+    // Get task first
+    const task = await this.findOne(taskId, userId);
+
+    // If task has no assignee
+    if (!task.assigneeId) {
+      return null;
+    }
+
+    // Get assignee user info
+    const result = await this.db
+      .select({
+        userId: schema.users.id,
+        email: schema.users.email,
+        username: schema.users.username,
+        fullName: schema.users.fullName,
+        avatarUrl: schema.users.avatarUrl,
+        status: schema.users.status,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, task.assigneeId));
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    return result[0];
+  }
+
   // Helper: Generate task number
   private async generateTaskNumber(projectId: number): Promise<number> {
     const result = await this.db

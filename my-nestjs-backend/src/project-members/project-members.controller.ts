@@ -15,6 +15,8 @@ import {
 import { ProjectMembersService } from './project-members.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('projects/:projectId/members')
 export class ProjectMembersController {
@@ -25,20 +27,27 @@ export class ProjectMembersController {
   addMember(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() addMemberDto: AddMemberDto,
+    @CurrentUser('userId') invitedBy: number,
   ) {
-    // TODO: Get userId from JWT token
-    const invitedBy = 1;
     return this.projectMembersService.addMember(projectId, addMemberDto, invitedBy);
   }
 
+  @Public()
   @Get()
   findAllByProject(@Param('projectId', ParseIntPipe) projectId: number) {
     return this.projectMembersService.findAllByProject(projectId);
   }
 
+  @Public()
   @Get('active')
   findActiveMembers(@Param('projectId', ParseIntPipe) projectId: number) {
     return this.projectMembersService.findActiveMembers(projectId);
+  }
+
+  @Public()
+  @Get('users')
+  getUsersInProject(@Param('projectId', ParseIntPipe) projectId: number) {
+    return this.projectMembersService.getUsersInProject(projectId);
   }
 
   @Patch(':userId/accept')
@@ -54,9 +63,8 @@ export class ProjectMembersController {
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() updateRoleDto: UpdateMemberRoleDto,
+    @CurrentUser('userId') updatedBy: number,
   ) {
-    // TODO: Get updatedBy from JWT token
-    const updatedBy = 1;
     return this.projectMembersService.updateRole(projectId, userId, updateRoleDto, updatedBy);
   }
 
@@ -65,9 +73,8 @@ export class ProjectMembersController {
   removeMember(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('userId') removedBy: number,
   ) {
-    // TODO: Get removedBy from JWT token
-    const removedBy = 1;
     return this.projectMembersService.removeMember(projectId, userId, removedBy);
   }
 }

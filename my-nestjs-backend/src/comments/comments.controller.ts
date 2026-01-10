@@ -15,6 +15,7 @@ import {
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('comments')
 export class CommentsController {
@@ -22,30 +23,34 @@ export class CommentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createCommentDto: CreateCommentDto) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  create(
+    @Body() createCommentDto: CreateCommentDto,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.commentsService.create(createCommentDto, userId);
   }
 
   @Get()
-  findByTask(@Query('taskId', ParseIntPipe) taskId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findByTask(
+    @Query('taskId', ParseIntPipe) taskId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.commentsService.findByTask(taskId, userId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.commentsService.findOne(id, userId);
   }
 
   @Get(':id/replies')
-  findReplies(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findReplies(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.commentsService.findReplies(id, userId);
   }
 
@@ -53,17 +58,17 @@ export class CommentsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCommentDto: UpdateCommentDto,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.commentsService.update(id, updateCommentDto, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.commentsService.remove(id, userId);
   }
 }

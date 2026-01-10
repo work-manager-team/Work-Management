@@ -16,6 +16,7 @@ import { LabelsService } from './labels.service';
 import { CreateLabelDto } from './dto/create-label.dto';
 import { UpdateLabelDto } from './dto/update-label.dto';
 import { AssignLabelDto } from './dto/assign-label.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('labels')
 export class LabelsController {
@@ -23,23 +24,26 @@ export class LabelsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createLabelDto: CreateLabelDto) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  create(
+    @Body() createLabelDto: CreateLabelDto,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.labelsService.create(createLabelDto, userId);
   }
 
   @Get()
-  findByProject(@Query('projectId', ParseIntPipe) projectId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findByProject(
+    @Query('projectId', ParseIntPipe) projectId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.labelsService.findByProject(projectId, userId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.labelsService.findOne(id, userId);
   }
 
@@ -47,17 +51,17 @@ export class LabelsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateLabelDto: UpdateLabelDto,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.labelsService.update(id, updateLabelDto, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.labelsService.remove(id, userId);
   }
 }
@@ -71,16 +75,16 @@ export class TaskLabelsController {
   assignToTask(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Body() assignLabelDto: AssignLabelDto,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.labelsService.assignToTask(taskId, assignLabelDto, userId);
   }
 
   @Get()
-  findByTask(@Param('taskId', ParseIntPipe) taskId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findByTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.labelsService.findByTask(taskId, userId);
   }
 
@@ -89,9 +93,8 @@ export class TaskLabelsController {
   removeFromTask(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Param('labelId', ParseIntPipe) labelId: number,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.labelsService.removeFromTask(taskId, labelId, userId);
   }
 }

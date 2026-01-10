@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { AttachmentsService } from './attachments.service';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('attachments')
 export class AttachmentsController {
@@ -20,31 +21,35 @@ export class AttachmentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createAttachmentDto: CreateAttachmentDto) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  create(
+    @Body() createAttachmentDto: CreateAttachmentDto,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.attachmentsService.create(createAttachmentDto, userId);
   }
 
   @Get()
-  findByTask(@Query('taskId', ParseIntPipe) taskId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findByTask(
+    @Query('taskId', ParseIntPipe) taskId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.attachmentsService.findByTask(taskId, userId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.attachmentsService.findOne(id, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.attachmentsService.remove(id, userId);
   }
 }
