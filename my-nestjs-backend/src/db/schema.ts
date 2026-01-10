@@ -181,6 +181,9 @@ export const sprints = pgTable(
     startDate: date('start_date').notNull(),
     endDate: date('end_date').notNull(),
     status: sprintStatusEnum('status').notNull().default('planned'),
+    createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, {
+      onDelete: 'set null',
+    }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -188,6 +191,7 @@ export const sprints = pgTable(
     projectIdx: index('idx_sprints_project').on(table.projectId),
     statusIdx: index('idx_sprints_status').on(table.status),
     dateIdx: index('idx_sprints_dates').on(table.startDate, table.endDate),
+    createdByIdx: index('idx_sprints_created_by').on(table.createdBy),
   })
 );
 

@@ -16,6 +16,8 @@ import {
 import { SprintsService } from './sprints.service';
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
+import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('sprints')
 export class SprintsController {
@@ -23,17 +25,20 @@ export class SprintsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createSprintDto: CreateSprintDto) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  create(
+    @Body() createSprintDto: CreateSprintDto,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.create(createSprintDto, userId);
   }
 
+  @Public()
   @Get()
   findAll(@Query('projectId', ParseIntPipe) projectId: number) {
     return this.sprintsService.findAllByProject(projectId);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.sprintsService.findOne(id);
@@ -43,38 +48,41 @@ export class SprintsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateSprintDto: UpdateSprintDto,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.sprintsService.update(id, updateSprintDto, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.remove(id, userId);
   }
 
   @Patch(':id/start')
-  startSprint(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  startSprint(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.startSprint(id, userId);
   }
 
   @Patch(':id/complete')
-  completeSprint(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  completeSprint(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.completeSprint(id, userId);
   }
 
   @Patch(':id/cancel')
-  cancelSprint(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  cancelSprint(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.cancelSprint(id, userId);
   }
 
@@ -82,9 +90,8 @@ export class SprintsController {
   updateSprintStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: 'planned' | 'active' | 'completed' | 'cancelled',
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.sprintsService.updateSprintStatus(id, status, userId);
   }
 
@@ -94,9 +101,8 @@ export class SprintsController {
   createComment(
     @Param('id', ParseIntPipe) sprintId: number,
     @Body() body: { content: string; parentCommentId?: number },
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.sprintsService.createComment(
       { sprintId, content: body.content, parentCommentId: body.parentCommentId },
       userId,
@@ -104,16 +110,18 @@ export class SprintsController {
   }
 
   @Get(':id/comments')
-  getComments(@Param('id', ParseIntPipe) sprintId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  getComments(
+    @Param('id', ParseIntPipe) sprintId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.getComments(sprintId, userId);
   }
 
   @Get('comments/:commentId/replies')
-  getCommentReplies(@Param('commentId', ParseIntPipe) commentId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  getCommentReplies(
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.sprintsService.getCommentReplies(commentId, userId);
   }
 }

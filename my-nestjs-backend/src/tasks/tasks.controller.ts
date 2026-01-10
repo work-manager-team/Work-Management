@@ -16,6 +16,7 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('tasks')
 export class TasksController {
@@ -23,14 +24,16 @@ export class TasksController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createTaskDto: CreateTaskDto) {
-    // TODO: Get reporterId from JWT token
-    const reporterId = 1;
+  create(
+    @Body() createTaskDto: CreateTaskDto,
+    @CurrentUser('userId') reporterId: number,
+  ) {
     return this.tasksService.create(createTaskDto, reporterId);
   }
 
   @Get()
   findAll(
+    @CurrentUser('userId') userId: number,
     @Query('projectId') projectId?: string,
     @Query('projectID') projectID?: string,
     @Query('sprintId') sprintId?: string,
@@ -38,9 +41,6 @@ export class TasksController {
     @Query('assigneeId') assigneeId?: string,
     @Query('assigneeID') assigneeID?: string,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
-
     // Support both camelCase and uppercase ID
     const finalProjectId = projectId || projectID;
     const finalSprintId = sprintId || sprintID;
@@ -62,26 +62,35 @@ export class TasksController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.tasksService.findOne(id, userId);
   }
 
   @Get(':id/subtasks')
-  getSubtasks(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  getSubtasks(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.tasksService.getSubtasks(id, userId);
+  }
+
+  @Get(':id/assignee')
+  getTaskAssignee(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    return this.tasksService.getTaskAssignee(id, userId);
   }
 
   @Put(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateTaskDto: UpdateTaskDto,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.tasksService.update(id, updateTaskDto, userId);
   }
 
@@ -89,9 +98,8 @@ export class TasksController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: string,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.tasksService.updateStatus(id, status, userId);
   }
 
@@ -99,9 +107,8 @@ export class TasksController {
   assignTask(
     @Param('id', ParseIntPipe) id: number,
     @Body('assigneeId', ParseIntPipe) assigneeId: number,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.tasksService.assignTask(id, assigneeId, userId);
   }
 
@@ -109,17 +116,17 @@ export class TasksController {
   updatePriority(
     @Param('id', ParseIntPipe) id: number,
     @Body('priority') priority: string,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.tasksService.updatePriority(id, priority, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.tasksService.remove(id, userId);
   }
 }
