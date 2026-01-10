@@ -31,7 +31,10 @@ export class SprintsService {
 
     const [sprint] = await this.db
       .insert(sprints)
-      .values(createSprintDto)
+      .values({
+        ...createSprintDto,
+        createdBy: userId,
+      })
       .returning();
 
     // Send notifications to project members

@@ -121,6 +121,41 @@ export class ProjectMembersService {
       );
   }
 
+  async getUsersInProject(projectId: number): Promise<any[]> {
+    // Check if project exists
+    const [project] = await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId));
+
+    if (!project) {
+      throw new NotFoundException(`Project với ID ${projectId} không tồn tại`);
+    }
+
+    // Get all active members with user info
+    const membersWithUsers = await this.db
+      .select({
+        userId: users.id,
+        email: users.email,
+        username: users.username,
+        fullName: users.fullName,
+        avatarUrl: users.avatarUrl,
+        role: projectMembers.role,
+        status: projectMembers.status,
+        joinedAt: projectMembers.joinedAt,
+      })
+      .from(projectMembers)
+      .innerJoin(users, eq(projectMembers.userId, users.id))
+      .where(
+        and(
+          eq(projectMembers.projectId, projectId),
+          eq(projectMembers.status, 'active')
+        )
+      );
+
+    return membersWithUsers;
+  }
+
   async acceptInvitation(projectId: number, userId: number): Promise<ProjectMember> {
     const [member] = await this.db
       .select()

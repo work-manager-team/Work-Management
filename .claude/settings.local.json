@@ -7,7 +7,9 @@
       "Bash(npx drizzle-kit push:*)",
       "Bash(npm install:*)",
       "Bash(ls:*)",
-      "Bash(del /Q \"GOOGLE_LOGIN_STRATEGY.md\" \"GOOGLE_OAUTH_IMPLEMENTATION.md\" \"EMAIL_AUTH_DOCUMENTATION.md\" \"EMAIL_SERVICES_COMPARISON.md\" \"EMAIL_VERIFICATION_STRATEGY.md\" \"SETUP_CHECKLIST.md\" \"SETUP_COMPLETED.md\" \"AUTO_NOTIFICATION_GUIDE.md\")"
+      "Bash(del /Q \"GOOGLE_LOGIN_STRATEGY.md\" \"GOOGLE_OAUTH_IMPLEMENTATION.md\" \"EMAIL_AUTH_DOCUMENTATION.md\" \"EMAIL_SERVICES_COMPARISON.md\" \"EMAIL_VERIFICATION_STRATEGY.md\" \"SETUP_CHECKLIST.md\" \"SETUP_COMPLETED.md\" \"AUTO_NOTIFICATION_GUIDE.md\")",
+      "Bash(exit 0)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

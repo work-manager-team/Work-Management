@@ -23,6 +23,8 @@ import { RequestChangeEmailDto } from './dto/request-change-email.dto';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { OtpRequestDto, OtpVerifyDto } from './dto/otp-request.dto';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -35,6 +37,7 @@ export class AuthController {
   /**
    * Verify email with token (POST - for API calls)
    */
+  @Public()
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
@@ -53,6 +56,7 @@ export class AuthController {
    * Verify email with token (GET - for email links)
    * User clicks link in email → directly verifies
    */
+  @Public()
   @Get('verify-email/:token')
   @HttpCode(HttpStatus.OK)
   async verifyEmailViaLink(@Req() req: Request, @Res() res: Response) {
@@ -80,6 +84,7 @@ export class AuthController {
   /**
    * Resend verification email
    */
+  @Public()
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
   async resendVerification(@Body() resendDto: ResendVerificationDto) {
@@ -123,6 +128,7 @@ export class AuthController {
   /**
    * Request password reset
    */
+  @Public()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
@@ -167,6 +173,7 @@ export class AuthController {
   /**
    * Reset password with token
    */
+  @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
@@ -180,14 +187,13 @@ export class AuthController {
 
   /**
    * Request email change (must be authenticated)
-   * Note: In real app, you should add AuthGuard to get userId from JWT
    */
   @Post('request-change-email')
   @HttpCode(HttpStatus.OK)
-  async requestChangeEmail(@Body() requestDto: RequestChangeEmailDto) {
-    // TODO: Get userId from JWT token (AuthGuard)
-    const userId = 1; // Hardcoded for now
-
+  async requestChangeEmail(
+    @Body() requestDto: RequestChangeEmailDto,
+    @CurrentUser('userId') userId: number,
+  ) {
     const user = await this.authService.getUserById(userId);
 
     if (!user) {
@@ -223,6 +229,7 @@ export class AuthController {
   /**
    * Verify email change with token
    */
+  @Public()
   @Post('verify-email-change')
   @HttpCode(HttpStatus.OK)
   async verifyEmailChange(@Body() verifyDto: VerifyEmailDto) {
@@ -240,6 +247,7 @@ export class AuthController {
   /**
    * Request magic link (passwordless login)
    */
+  @Public()
   @Post('magic-link/request')
   @HttpCode(HttpStatus.OK)
   async requestMagicLink(@Body() requestDto: MagicLinkRequestDto) {
@@ -287,6 +295,7 @@ export class AuthController {
   /**
    * Verify magic link and login (POST - for API calls)
    */
+  @Public()
   @Post('magic-link/verify')
   @HttpCode(HttpStatus.OK)
   async verifyMagicLink(@Body() verifyDto: VerifyEmailDto, @Res() res: Response) {
@@ -317,6 +326,7 @@ export class AuthController {
    * Verify magic link and login (GET - for email links)
    * User clicks magic link in email → directly logs in
    */
+  @Public()
   @Get('magic-link/:token')
   @HttpCode(HttpStatus.OK)
   async verifyMagicLinkViaLink(@Req() req: Request, @Res() res: Response) {
@@ -356,6 +366,7 @@ export class AuthController {
   /**
    * Request OTP code
    */
+  @Public()
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
   async requestOTP(@Body() requestDto: OtpRequestDto) {
@@ -402,6 +413,7 @@ export class AuthController {
   /**
    * Verify OTP and login
    */
+  @Public()
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
   async verifyOTP(@Body() verifyDto: OtpVerifyDto, @Res() res: Response) {
@@ -431,6 +443,7 @@ export class AuthController {
   /**
    * Google OAuth - Initiate authentication
    */
+  @Public()
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
   async googleAuth(@Req() req: Request) {
@@ -440,6 +453,7 @@ export class AuthController {
   /**
    * Google OAuth - Callback URL
    */
+  @Public()
   @Get('google/callback')
   @UseGuards(GoogleOAuthGuard)
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
@@ -480,6 +494,7 @@ export class AuthController {
   /**
    * Logout - Clear cookie
    */
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Res() res: Response) {

@@ -15,6 +15,8 @@ import {
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('projects')
 export class ProjectsController {
@@ -24,26 +26,25 @@ export class ProjectsController {
   @HttpCode(HttpStatus.CREATED)
   create(
     @Body() createProjectDto: CreateProjectDto,
-    // TODO: Get userId from JWT token
-    // @CurrentUser() user: User
+    @CurrentUser('userId') ownerId: number,
   ) {
-    // Tạm thời hardcode userId = 1 cho demo
-    // Trong thực tế sẽ lấy từ JWT token
-    const ownerId = 1;
     return this.projectsService.create(createProjectDto, ownerId);
   }
 
+  @Public()
   @Get('search')
   searchProjects(@Query('name') name: string) {
     return this.projectsService.searchByName(name);
   }
 
+  @Public()
   @Get('count')
   async getCount() {
     const count = await this.projectsService.getProjectCount();
     return { count };
   }
 
+  @Public()
   @Get()
   findAll(@Query('userId', ParseIntPipe) userId?: number) {
     if (userId) {
@@ -52,6 +53,7 @@ export class ProjectsController {
     return this.projectsService.findAll();
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.findOne(id);
@@ -61,25 +63,27 @@ export class ProjectsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateProjectDto: UpdateProjectDto,
+    @CurrentUser('userId') userId: number,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
     return this.projectsService.update(id, updateProjectDto, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.projectsService.remove(id, userId);
   }
 
+  @Public()
   @Get(':id/details')
   async getProjectDetails(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.getProjectDetails(id);
   }
 
+  @Public()
   @Get(':id/activities')
   async getProjectActivities(
     @Param('id', ParseIntPipe) id: number,
@@ -89,9 +93,10 @@ export class ProjectsController {
   }
 
   @Get(':id/role')
-  async getUserRole(@Param('id', ParseIntPipe) id: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  async getUserRole(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     const role = await this.projectsService.getUserRole(id, userId);
     return {
       projectId: id,
@@ -100,6 +105,7 @@ export class ProjectsController {
     };
   }
 
+  @Public()
   @Get(':projectId/users/:userId/role')
   async getUserRoleByIds(
     @Param('projectId', ParseIntPipe) projectId: number,

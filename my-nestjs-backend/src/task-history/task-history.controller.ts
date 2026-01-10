@@ -7,22 +7,25 @@ import {
   Query,
 } from '@nestjs/common';
 import { TaskHistoryService } from './task-history.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @Controller('task-history')
 export class TaskHistoryController {
   constructor(private readonly taskHistoryService: TaskHistoryService) {}
 
   @Get()
-  findByTask(@Query('taskId', ParseIntPipe) taskId: number) {
-    // TODO: Get userId from JWT token
-    const userId = 1;
+  findByTask(
+    @Query('taskId', ParseIntPipe) taskId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
     return this.taskHistoryService.findByTask(taskId, userId);
   }
 
   @Get('user/:userId')
-  findByUser(@Param('userId', ParseIntPipe) userId: number) {
-    // TODO: Get requesterId from JWT token
-    const requesterId = 1;
+  findByUser(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser('userId') requesterId: number,
+  ) {
     return this.taskHistoryService.findByUser(userId, requesterId);
   }
 }
