@@ -18,7 +18,6 @@ export interface RegisterData {
   email: string;
   password: string;
   fullName?: string;
-  avatarUrl: string
 }
 
 export interface LoginResponse {
@@ -39,7 +38,6 @@ export interface RegisterResponse {
     username: string;
     email: string;
     fullName: string;
-    avatarUrl: string;
   };
   message: string;
 }
@@ -73,7 +71,6 @@ class UserAuthService {
           console.error("chưa lưu");
         }
         console.log("ok", localStorage.getItem('user'));
-        //localStorage.setItem('userId', data.user.id.toString());
       }
 
       if (data.accessToken) {

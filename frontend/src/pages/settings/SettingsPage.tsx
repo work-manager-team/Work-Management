@@ -32,7 +32,7 @@ const SettingsPage = () => {
         try {
             setLoading(true);
             setError('');
-
+            const accessToken = localStorage.getItem('accessToken');
             const userData = localStorage.getItem('user');
             if (!userData) {
                 setError('User not found. Please login again.');
@@ -48,6 +48,7 @@ const SettingsPage = () => {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                 }
             );
@@ -73,13 +74,14 @@ const SettingsPage = () => {
         try {
             setSaving(true);
             setError('');
-
+            const accessToken = localStorage.getItem('accessToken');
             const response = await fetch(
                 `https://work-management-chi.vercel.app/users/${profile.id}`,
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${accessToken}`,
                     },
                     body: JSON.stringify({
                         fullName: editedProfile.fullName,

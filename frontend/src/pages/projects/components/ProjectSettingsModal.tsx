@@ -32,8 +32,8 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     description: project.description || '',
     status: project.status,
     visibility: project.visibility,
-    startDate: project.startDate.split('T')[0], // Format to YYYY-MM-DD
-    endDate: project.endDate.split('T')[0],
+    startDate: project.startDate ? project.startDate.split('T')[0] : '',
+    endDate: project.endDate ? project.endDate.split('T')[0] : '',
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -86,8 +86,8 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
       formData.description !== (project.description || '') ||
       formData.status !== project.status ||
       formData.visibility !== project.visibility ||
-      formData.startDate !== project.startDate.split('T')[0] ||
-      formData.endDate !== project.endDate.split('T')[0];
+      formData.startDate !== (project.startDate ? project.startDate.split('T')[0] : '') ||
+      formData.endDate !== (project.endDate ? project.endDate.split('T')[0] : '');
 
     setHasChanges(hasChanged);
 
@@ -114,12 +114,14 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     setError(null);
 
     try {
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(
         `https://work-management-chi.vercel.app/projects/${project.id}`,
         {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             name: formData.name,
@@ -156,8 +158,8 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
       description: project.description || '',
       status: project.status,
       visibility: project.visibility,
-      startDate: project.startDate.split('T')[0],
-      endDate: project.endDate.split('T')[0],
+      startDate: project.startDate ? project.startDate.split('T')[0] : '',
+      endDate: project.endDate ? project.endDate.split('T')[0] : '',
     });
     setHasChanges(false);
     setDateError(null); // Reset date error
@@ -173,12 +175,14 @@ const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     setError(null);
 
     try {
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(
         `https://work-management-chi.vercel.app/projects/${project.id}`,
         {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );

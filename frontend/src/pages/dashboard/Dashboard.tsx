@@ -5,7 +5,7 @@ import { Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 // Import components
 import ProjectCard from './components/ProjectCard';
 import RecentWorkItems from './components/RecentWorkItems';
-import ProjectsModal from './components/ProjectsModal';
+
 
 // Import services
 import projectService from '../../services/user/project.service';
@@ -183,14 +183,7 @@ const Dashboard: React.FC = () => {
         />
       </section>
 
-      {/* All Projects Modal */}
-      {showAllProjects && (
-        <ProjectsModal
-          projects={projects}
-          onClose={handleCloseModal}
-          onProjectClick={handleProjectClick}
-        />
-      )}
+      
     </div>
   );
 };

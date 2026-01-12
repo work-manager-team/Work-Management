@@ -128,7 +128,14 @@ const ProjectDetailsPage: React.FC = () => {
             </span>
             <button 
               className="project-settings-button"
-              onClick={() => setShowSettingsModal(true)}
+              onClick={() => {
+                console.log('=== BUTTON CLICKED ===');
+                console.log('project:', project);
+                console.log('project is null?', project === null);
+                setShowSettingsModal(true)
+
+              }
+              }
               title="Project Settings"
             >
               <Settings size={18} />

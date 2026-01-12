@@ -93,7 +93,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     setError(null);
 
     try {
-
+      const accessToken = localStorage.getItem('accessToken');
       // Get current user
       const currentUser = authService.getCurrentUser();
       
@@ -103,7 +103,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
 
       // Lưu current userId
       setCurrentUserId(currentUser.id);
-
+      
       // Fetch project members
       let projectMembers: ProjectMember[];
       if (status === 'active') {
@@ -113,6 +113,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );
@@ -124,7 +125,26 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       projectMembers = await response.json();
       }
       else {
-        projectMembers = await projectService.getProjectMembers(projectId);
+        const response = await fetch(
+          `https://work-management-chi.vercel.app/projects/${projectId}/members`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized. Please login again.');
+          }
+          throw new Error('Failed to fetch members');
+        }
+        
+        projectMembers = await response.json();
+      
       }
       
       // Find current user's role in the project
@@ -239,12 +259,14 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     setDeletingUserId(userId);
     setError(null);
     try {
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(
         `https://work-management-chi.vercel.app/projects/${projectId}/members/${userId}`,
         {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );
@@ -333,12 +355,14 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     // Process each role change
     for (const [userId, change] of pendingRoleChanges) {
       try {
+        const accessToken = localStorage.getItem('accessToken');
         const response = await fetch(
           `https://work-management-chi.vercel.app/projects/${projectId}/members/${userId}/role`,
           {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({ role: change.newRole }),
           }

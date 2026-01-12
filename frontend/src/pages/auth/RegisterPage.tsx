@@ -88,7 +88,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
         email: formData.email.trim(),
         password: formData.password.trim(),
         fullName: formData.fullName.trim() || formData.username.trim(),
-        avatarUrl: formData.avatarUrl.trim()
       });
 
       console.log('Registration success:', response);

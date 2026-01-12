@@ -29,7 +29,7 @@ const RecentWorkItems: React.FC<RecentWorkItemsProps> = ({
     { id: 'viewed', label: 'Viewed' },
     { id: 'assigned', label: 'Assigned to me', count: assignedTasks.length || undefined },
     { id: 'starred', label: 'Starred' },
-    { id: 'boards', label: 'Boards' },
+    
   ];
 
   const handleTabClick = async (tabId: string) => {

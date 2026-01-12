@@ -53,7 +53,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
         try {
             setLoading(true);
             setError('');
-
+            const accessToken = localStorage.getItem('accessToken');
             // Get userId from localStorage
             const userData = localStorage.getItem('user');
             if (!userData) {
@@ -70,6 +70,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                 }
             );
@@ -95,13 +96,14 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
         try {
             setSaving(true);
             setError('');
-
+            const accessToken = localStorage.getItem('accessToken');
             const response = await fetch(
                 `https://work-management-chi.vercel.app/users/${profile.id}`,
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                     body: JSON.stringify({
                         fullName: editedProfile.fullName,
@@ -188,13 +190,14 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
 
             const user = JSON.parse(userData);
             const userId = user.id;
-
+            const accessToken = localStorage.getItem('accessToken');
             const response = await fetch(
                 `https://work-management-chi.vercel.app/users/${userId}/change-password`,
                 {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                     body: JSON.stringify({
                         oldPassword: oldPassword,
@@ -236,13 +239,14 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
 
             const user = JSON.parse(userData);
             const userId = user.id;
-
+            const accessToken = localStorage.getItem('accessToken');
             const response = await fetch(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
                     },
                 }
             );

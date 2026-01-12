@@ -73,10 +73,12 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
     setLoading(true);
 
     try {
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch('https://work-management-chi.vercel.app/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify(formData),
       });
@@ -94,10 +96,12 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
       const currentUserId = user ? JSON.parse(user).id : null;
 
       if (currentUserId) {
+        const accessToken = localStorage.getItem('accessToken');
         const addMemberResponse = await fetch(`https://work-management-chi.vercel.app/projects/${projectId}/members`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             userId: currentUserId,
@@ -112,6 +116,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
         //cập nhật status của người tạo project thành active (đã tham gia)
         const updateStatus = await fetch(`https://work-management-chi.vercel.app/projects/${projectId}/members/${currentUserId}/accept`, {
           method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
           
         });
         if (!updateStatus.ok) {

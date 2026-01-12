@@ -97,6 +97,7 @@ class ProjectService {
     }
   }
   // Get all projects
+  // auth: public
   async getAllProjects(projectId: number): Promise<Project[]> {
     try {
       const response = await fetch(
@@ -120,8 +121,10 @@ class ProjectService {
       throw error;
     }
   }
+  // auth: public
   async getUserProjects(userId: string | number): Promise<Project[]> {
     try {
+      
       const response = await fetch(
         `${API_BASE_URL}/projects?userId=${userId}`,
         {
@@ -147,6 +150,7 @@ class ProjectService {
   /**
    * Get project details by ID
    */
+  // auth: public
   async getProjectDetails(projectId: string | number): Promise<ProjectDetails> {
     try {
       const response = await fetch(
@@ -176,12 +180,14 @@ class ProjectService {
    */
   async getProjectMembers(projectId: string | number): Promise<ProjectMember[]> {
     try {
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(
         `${API_BASE_URL}/projects/${projectId}/members`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );
@@ -203,12 +209,14 @@ class ProjectService {
    */
   async getUserById(userId: string | number): Promise<User> {
     try {
+      const accessToken = localStorage.getItem('accessToken');
       const response = await fetch(
         `${API_BASE_URL}/users/${userId}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );
@@ -228,10 +236,12 @@ class ProjectService {
   // Get all users
   async getAllUsers(): Promise<User[]> {
   try {
+    const accessToken = localStorage.getItem('accessToken');
     const response = await fetch(`${API_BASE_URL}/users`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
     });
 
@@ -250,10 +260,12 @@ class ProjectService {
   // Add a member to project
   async addProjectMember(projectId: number, userId: number, role: string): Promise<void> {
   try {
+    const accessToken = localStorage.getItem('accessToken');
     const response = await fetch(`${API_BASE_URL}/projects/${projectId}/members`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         userId,
