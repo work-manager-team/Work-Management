@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Trash2, Clock } from 'lucide-react';
 import Layout from './Layout';
+import { apiCall, getAuthHeaders } from '../utils/api';
 
 interface Notification {
     id: string;
@@ -18,10 +19,12 @@ interface NotificationsPageProps {
 const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // Fetch notifications on component mount
     useEffect(() => {
         fetchNotifications();
+        fetchUnreadCount();
     }, []);
 
     const fetchNotifications = async () => {
@@ -35,7 +38,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
                 return;
             }
 
-            const response = await fetch(`https://work-management-chi.vercel.app/notifications/user/${userId}`);
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/user/${userId}`);
             const data = await response.json();
             const notificationsData: Notification[] = Array.isArray(data) ? data : data.data || [];
             setNotifications(notificationsData);
@@ -47,21 +50,78 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
         }
     };
 
-    const markAsRead = (id: string) => {
-        setNotifications(
-            notifications.map((notif) =>
-                notif.id === id ? { ...notif, read: true } : notif
-            )
-        );
+    const fetchUnreadCount = async () => {
+        try {
+            const user = localStorage.getItem('user');
+            const userId = user ? JSON.parse(user).id : null;
+
+            if (!userId) {
+                return;
+            }
+
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/user/${userId}/count`);
+            const data = await response.json();
+            setUnreadCount(data.count || 0);
+        } catch (error) {
+            console.error('Error fetching unread count:', error);
+        }
+    };
+
+    const markAsRead = async (id: string) => {
+        try {
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/${id}/read`, {
+                method: 'PATCH',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                setNotifications(
+                    notifications.map((notif) =>
+                        notif.id === id ? { ...notif, read: true } : notif
+                    )
+                );
+                // Update unread count
+                fetchUnreadCount();
+            } else {
+                console.error('Error marking notification as read:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            const user = localStorage.getItem('user');
+            const userId = user ? JSON.parse(user).id : null;
+
+            if (!userId) {
+                return;
+            }
+
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/user/${userId}/read-all`, {
+                method: 'PATCH',
+                headers: getAuthHeaders()
+            });
+
+            if (response.ok) {
+                setNotifications(
+                    notifications.map((notif) => ({ ...notif, read: true }))
+                );
+                setUnreadCount(0);
+            } else {
+                console.error('Error marking all as read:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error marking all as read:', error);
+        }
     };
 
     const deleteNotification = async (id: string) => {
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/notifications/${id}`, {
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
@@ -71,13 +131,47 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
 
             // Remove from UI after successful deletion
             setNotifications(notifications.filter((notif) => notif.id !== id));
+            // Update unread count
+            fetchUnreadCount();
             console.log('Notification deleted successfully');
         } catch (error) {
             console.error('Error deleting notification:', error);
         }
     };
 
-    const unreadCount = notifications.filter((n) => !n.read).length;
+    const deleteAllNotifications = async () => {
+        if (!window.confirm('Are you sure you want to delete all notifications?')) {
+            return;
+        }
+
+        try {
+            const user = localStorage.getItem('user');
+            const userId = user ? JSON.parse(user).id : null;
+
+            if (!userId) {
+                return;
+            }
+
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/user/${userId}/all`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                console.error('Error deleting all notifications:', response.statusText);
+                return;
+            }
+
+            // Clear all notifications
+            setNotifications([]);
+            setUnreadCount(0);
+            console.log('All notifications deleted successfully');
+        } catch (error) {
+            console.error('Error deleting all notifications:', error);
+        }
+    };
+
+    const getDisplayedUnreadCount = notifications.filter((n) => !n.read).length;
 
     const getTypeBgColor = (type: string) => {
         switch (type) {
@@ -110,33 +204,28 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onLogout }) => {
             <div className="max-w-4xl mx-auto">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-bold text-gray-800">Notifications</h1>
-                    {unreadCount > 0 && (
-                        <span className="bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
-                            {unreadCount} Unread
-                        </span>
-                    )}
-                </div>
-
-                {/* Notification Settings */}
-                <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-800">Notification Preferences</h2>
-                    <div className="space-y-3">
-                        <label className="flex items-center">
-                            <input type="checkbox" className="w-4 h-4" defaultChecked />
-                            <span className="ml-3 text-gray-700">Task assignments</span>
-                        </label>
-                        <label className="flex items-center">
-                            <input type="checkbox" className="w-4 h-4" defaultChecked />
-                            <span className="ml-3 text-gray-700">Task updates</span>
-                        </label>
-                        <label className="flex items-center">
-                            <input type="checkbox" className="w-4 h-4" defaultChecked />
-                            <span className="ml-3 text-gray-700">Comments on tasks</span>
-                        </label>
-                        <label className="flex items-center">
-                            <input type="checkbox" className="w-4 h-4" defaultChecked />
-                            <span className="ml-3 text-gray-700">Deadline alerts</span>
-                        </label>
+                    <div className="flex items-center gap-3">
+                        {getDisplayedUnreadCount > 0 && (
+                            <span className="bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
+                                {getDisplayedUnreadCount} Unread
+                            </span>
+                        )}
+                        {getDisplayedUnreadCount > 0 && (
+                            <button
+                                onClick={markAllAsRead}
+                                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded font-medium transition"
+                            >
+                                Mark All Read
+                            </button>
+                        )}
+                        {notifications.length > 0 && (
+                            <button
+                                onClick={deleteAllNotifications}
+                                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded font-medium transition"
+                            >
+                                Delete All
+                            </button>
+                        )}
                     </div>
                 </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X } from 'lucide-react';
+import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X, User } from 'lucide-react';
 import Layout from './Layout';
+import { apiCall, getAuthHeaders } from '../utils/api';
 
 interface Sprint {
     id: string;
@@ -44,6 +45,7 @@ interface Comment {
     content: string;
     createdAt?: string;
     updatedAt?: string;
+    userName?: string;
 }
 
 interface BoardsPageProps {
@@ -74,6 +76,10 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const [newComment, setNewComment] = useState('');
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
     const [editingCommentContent, setEditingCommentContent] = useState('');
+    const [showAssigneeModal, setShowAssigneeModal] = useState(false);
+    const [assigneeInfo, setAssigneeInfo] = useState<{ id: string; name: string; email?: string } | null>(null);
+    const [assigneeLoading, setAssigneeLoading] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
     const [columns, setColumns] = useState<BoardColumn[]>([
         { id: 'todo', title: 'TO DO', tasks: [] },
         { id: 'in_progress', title: 'IN PROGRESS', tasks: [] },
@@ -114,7 +120,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                 return;
             }
 
-            const response = await fetch(`https://work-management-chi.vercel.app/projects?userId=${userId}`);
+            const response = await apiCall(`https://work-management-chi.vercel.app/projects?userId=${userId}`);
             const data = await response.json();
             setProjects(Array.isArray(data) ? data : data.data || []);
 
@@ -135,7 +141,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const fetchSprints = async (projectId: string) => {
         try {
             setLoading(true);
-            const response = await fetch(`https://work-management-chi.vercel.app/sprints?projectId=${projectId}`);
+            const response = await apiCall(`https://work-management-chi.vercel.app/sprints?projectId=${projectId}`);
             const data = await response.json();
             const sprintsData: Sprint[] = Array.isArray(data) ? data : data.data || [];
             setSprints(sprintsData);
@@ -161,7 +167,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const fetchTasks = async (sprintId: string) => {
         try {
             setLoading(true);
-            const response = await fetch(`https://work-management-chi.vercel.app/tasks?sprintId=${sprintId}`);
+            const response = await apiCall(`https://work-management-chi.vercel.app/tasks?sprintId=${sprintId}`);
             const data = await response.json();
             const tasks: Task[] = Array.isArray(data) ? data : data.data || [];
 
@@ -183,11 +189,9 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
 
     const updateTaskStatus = async (taskId: string, newStatus: 'todo' | 'in_progress' | 'done' | 'not_completed') => {
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/tasks/${taskId}/status`, {
+            const response = await apiCall(`https://work-management-chi.vercel.app/tasks/${taskId}/status`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ status: newStatus })
             });
 
@@ -292,11 +296,9 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
             const user = localStorage.getItem('user');
             const reporterId = user ? JSON.parse(user).id : null;
 
-            const response = await fetch('https://work-management-chi.vercel.app/tasks', {
+            const response = await apiCall('https://work-management-chi.vercel.app/tasks', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     projectId: selectedProject,
                     sprintId: selectedSprint,
@@ -337,9 +339,32 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
 
     const fetchComments = async (taskId: string) => {
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/comments?taskId=${taskId}`);
+            const response = await apiCall(`https://work-management-chi.vercel.app/comments?taskId=${taskId}`);
             const data = await response.json();
-            setComments(Array.isArray(data) ? data : data.data || []);
+            const commentsData: Comment[] = Array.isArray(data) ? data : data.data || [];
+
+            // Fetch user info for each comment to get user names
+            const commentsWithUserInfo = await Promise.all(
+                commentsData.map(async (comment) => {
+                    try {
+                        const userResponse = await apiCall(
+                            `https://work-management-chi.vercel.app/users/${comment.userId}`
+                        );
+                        if (userResponse.ok) {
+                            const userData = await userResponse.json();
+                            return {
+                                ...comment,
+                                userName: userData.name || userData.email || comment.userId
+                            };
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching user info for ${comment.userId}:`, error);
+                    }
+                    return comment;
+                })
+            );
+
+            setComments(commentsWithUserInfo);
         } catch (error) {
             console.error('Error fetching comments:', error);
             setComments([]);
@@ -350,11 +375,9 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
         if (!newComment.trim() || !selectedTask) return;
 
         try {
-            const response = await fetch('https://work-management-chi.vercel.app/comments', {
+            const response = await apiCall('https://work-management-chi.vercel.app/comments', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     taskId: selectedTask.id,
                     content: newComment
@@ -374,11 +397,9 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
         if (!editingCommentContent.trim()) return;
 
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/comments/${commentId}`, {
+            const response = await apiCall(`https://work-management-chi.vercel.app/comments/${commentId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     content: editingCommentContent
                 })
@@ -390,25 +411,38 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                 if (selectedTask) {
                     fetchComments(selectedTask.id);
                 }
+            } else {
+                // Show error notification
+                setNotificationMessage('Failed to update comment. You can only edit your own comments.');
+                setTimeout(() => setNotificationMessage(null), 3000);
             }
         } catch (error) {
             console.error('Error updating comment:', error);
+            setNotificationMessage('Error updating comment. Please try again.');
+            setTimeout(() => setNotificationMessage(null), 3000);
         }
     };
 
     const deleteComment = async (commentId: string) => {
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/comments/${commentId}`, {
-                method: 'DELETE'
+            const response = await apiCall(`https://work-management-chi.vercel.app/comments/${commentId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
 
             if (response.ok) {
                 if (selectedTask) {
                     fetchComments(selectedTask.id);
                 }
+            } else {
+                // Show error notification
+                setNotificationMessage('Failed to delete comment. You can only delete your own comments.');
+                setTimeout(() => setNotificationMessage(null), 3000);
             }
         } catch (error) {
             console.error('Error deleting comment:', error);
+            setNotificationMessage('Error deleting comment. Please try again.');
+            setTimeout(() => setNotificationMessage(null), 3000);
         }
     };
 
@@ -418,12 +452,35 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
         fetchComments(task.id);
     };
 
+    const openAssigneeModal = async (assigneeId: string) => {
+        try {
+            setAssigneeLoading(true);
+            const response = await apiCall(`https://work-management-chi.vercel.app/users/${assigneeId}`);
+
+            if (response.ok) {
+                const userData = await response.json();
+                setAssigneeInfo(userData);
+                setShowAssigneeModal(true);
+            } else {
+                setNotificationMessage('Failed to load assignee information.');
+                setTimeout(() => setNotificationMessage(null), 3000);
+            }
+        } catch (error) {
+            console.error('Error fetching assignee:', error);
+            setNotificationMessage('Error loading assignee information.');
+            setTimeout(() => setNotificationMessage(null), 3000);
+        } finally {
+            setAssigneeLoading(false);
+        }
+    };
+
     const deleteTask = async (taskId: string) => {
         if (!window.confirm('Are you sure you want to delete this task?')) return;
 
         try {
-            const response = await fetch(`https://work-management-chi.vercel.app/tasks/${taskId}`, {
-                method: 'DELETE'
+            const response = await apiCall(`https://work-management-chi.vercel.app/tasks/${taskId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
 
             if (response.ok) {
@@ -580,15 +637,26 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                                 <p className="text-xs text-gray-600 mb-2">
                                                     {task.description}
                                                 </p>
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex items-center justify-between mb-2">
                                                     <span className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(task.priority)}`}>
                                                         {task.priority}
                                                     </span>
-                                                    {task.priority === 'high' && (
-                                                        <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                                            !
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        {task.assigneeId && (
+                                                            <button
+                                                                onClick={() => openAssigneeModal(task.assigneeId!)}
+                                                                className="text-gray-400 hover:text-blue-600 transition"
+                                                                title="View assignee"
+                                                            >
+                                                                <User size={16} />
+                                                            </button>
+                                                        )}
+                                                        {task.priority === 'high' && (
+                                                            <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                                                !
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <button
                                                     onClick={() => openCommentModal(task)}
@@ -760,7 +828,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                                 <>
                                                     <p className="text-sm text-gray-800">{comment.content}</p>
                                                     <div className="flex items-center justify-between mt-2">
-                                                        <span className="text-xs text-gray-500">By {comment.userId}</span>
+                                                        <span className="text-xs text-gray-500">By {comment.userName || comment.userId}</span>
                                                         <div className="flex gap-2">
                                                             <button
                                                                 onClick={() => {
@@ -804,6 +872,63 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* Assignee Modal */}
+                {showAssigneeModal && assigneeInfo && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-800">Assignee Information</h2>
+                                <button
+                                    onClick={() => {
+                                        setShowAssigneeModal(false);
+                                        setAssigneeInfo(null);
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {assigneeLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <span className="text-gray-500">Loading...</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <User size={24} className="text-purple-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-800">{assigneeInfo.name}</h3>
+                                            {assigneeInfo.email && (
+                                                <p className="text-sm text-gray-600">{assigneeInfo.email}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={() => {
+                                    setShowAssigneeModal(false);
+                                    setAssigneeInfo(null);
+                                }}
+                                className="w-full mt-6 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Notification Toast */}
+                {notificationMessage && (
+                    <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm animate-pulse">
+                        {notificationMessage}
                     </div>
                 )}
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Edit2, Save, AlertCircle, Loader, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
+import { apiCall, getAuthHeaders } from '../utils/api';
 
 interface UserProfile {
     id: number;
@@ -65,13 +66,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
             const user = JSON.parse(userData);
             const userId = user.id;
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 
@@ -97,13 +96,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
             setSaving(true);
             setError('');
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${profile.id}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         fullName: editedProfile.fullName,
                         email: editedProfile.email,
@@ -190,13 +187,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
             const user = JSON.parse(userData);
             const userId = user.id;
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}/change-password`,
                 {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         oldPassword: oldPassword,
                         newPassword: newPassword
@@ -238,13 +233,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
             const user = JSON.parse(userData);
             const userId = user.id;
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 

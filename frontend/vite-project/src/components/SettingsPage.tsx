@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, User, Edit2, Save, AlertCircle, Loader } from 'lucide-react';
 import Layout from './Layout';
 import { useTheme } from '../context/ThemeContext';
+import { apiCall, getAuthHeaders } from '../utils/api';
 
 interface UserProfile {
     id: number;
@@ -43,13 +44,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout }) => {
             const user = JSON.parse(userData);
             const userId = user.id;
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 
@@ -75,13 +74,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout }) => {
             setSaving(true);
             setError('');
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${profile.id}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         fullName: editedProfile.fullName,
                         email: editedProfile.email,
