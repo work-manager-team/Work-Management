@@ -1,9 +1,12 @@
+// src/attachments/attachments.module.ts
 import { Module } from '@nestjs/common';
 import { AttachmentsService } from './attachments.service';
-import { AttachmentsController } from './attachments.controller';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { DatabaseModule } from '../db/database.module';
 
 @Module({
+  imports: [DatabaseModule, CloudinaryModule],
   providers: [AttachmentsService],
-  controllers: [AttachmentsController]
+  exports: [AttachmentsService],
 })
 export class AttachmentsModule {}

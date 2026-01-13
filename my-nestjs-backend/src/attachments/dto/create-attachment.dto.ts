@@ -1,23 +1,17 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
+// src/attachments/dto/create-attachment.dto.ts
+import { IsNotEmpty, IsString, IsInt, IsOptional, IsIn } from 'class-validator';
 
 export class CreateAttachmentDto {
-  @IsNumber()
+  @IsInt()
   @IsNotEmpty()
-  taskId: number;
+  uploadedBy: number;
 
   @IsString()
   @IsNotEmpty()
-  fileName: string;
+  @IsIn(['user_avatar', 'task', 'project', 'comment'])
+  entityType: 'user_avatar' | 'task' | 'project' | 'comment';
 
-  @IsString()
-  @IsNotEmpty()
-  fileUrl: string;
-
-  @IsNumber()
+  @IsInt()
   @IsOptional()
-  fileSize?: number;
-
-  @IsString()
-  @IsOptional()
-  mimeType?: string;
+  entityId?: number;
 }

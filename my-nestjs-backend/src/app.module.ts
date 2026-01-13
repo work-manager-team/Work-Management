@@ -14,6 +14,7 @@ import { SprintsModule } from './sprints/sprints.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { LabelsModule } from './labels/labels.module';
 import { TaskHistoryModule } from './task-history/task-history.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -35,6 +36,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     TasksModule,
     CommentsModule,
     AttachmentsModule,
+    CloudinaryModule,
     LabelsModule,
     TaskHistoryModule,
     NotificationsModule,
