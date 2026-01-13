@@ -252,4 +252,18 @@ export class UsersService {
       })
       .where(eq(users.id, userId));
   }
+
+  /**
+   * Update user avatar
+   */
+  async updateAvatar(userId: number, avatarUrl: string | null, avatarPublicId: string | null): Promise<void> {
+    await this.db
+      .update(users)
+      .set({
+        avatarUrl,
+        avatarPublicId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
 }

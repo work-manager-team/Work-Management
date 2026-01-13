@@ -1,14 +1,10 @@
 // src/attachments/attachments.service.ts
-import { 
-  Injectable, 
-  Inject, 
-  NotFoundException, 
-  ForbiddenException 
-} from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { DRIZZLE } from '../db/database.module';
-import { attachments, tasks, projectMembers, Attachment } from '../db/schema';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { attachments } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
 import * as schema from '../db/schema';
 
@@ -16,141 +12,111 @@ import * as schema from '../db/schema';
 export class AttachmentsService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    private cloudinary: CloudinaryService,
   ) {}
 
-  async create(createAttachmentDto: CreateAttachmentDto, userId: number): Promise<Attachment> {
-    // Get task to check project
-    const [task] = await this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, createAttachmentDto.taskId));
+  /**
+   * Upload and save attachment
+   */
+  async create(file: Express.Multer.File, dto: CreateAttachmentDto) {
+    // Upload to Cloudinary
+    const folder = `work-management/${dto.entityType}`;
+    const result = await this.cloudinary.uploadFile(file, folder);
 
-    if (!task) {
-      throw new NotFoundException('Task không tồn tại');
-    }
-
-    // Check if user has access (at least member)
-    const canUpload = await this.checkPermission(task.projectId, userId, ['member', 'admin']);
-    if (!canUpload) {
-      throw new ForbiddenException('Bạn không có quyền upload file vào task này');
-    }
-
+    // Save to database
     const [attachment] = await this.db
       .insert(attachments)
       .values({
-        ...createAttachmentDto,
-        uploadedBy: userId,
+        publicId: result.public_id,
+        secureUrl: result.secure_url,
+        resourceType: result.resource_type,
+        format: result.format,
+        bytes: result.bytes,
+        width: result.width || null,
+        height: result.height || null,
+        uploadedBy: dto.uploadedBy,
+        entityType: dto.entityType,
+        entityId: dto.entityId || null,
       })
       .returning();
 
     return attachment;
   }
 
-  async findByTask(taskId: number, userId: number): Promise<Attachment[]> {
-    // Get task to check project
-    const [task] = await this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId));
-
-    if (!task) {
-      throw new NotFoundException('Task không tồn tại');
-    }
-
-    // Check access
-    const hasAccess = await this.checkUserInProject(userId, task.projectId);
-    if (!hasAccess) {
-      throw new ForbiddenException('Bạn không có quyền xem attachments của task này');
-    }
-
-    return await this.db
+  /**
+   * Get all attachments for an entity
+   */
+  async findByEntity(entityType: string, entityId: number) {
+    return this.db
       .select()
       .from(attachments)
-      .where(eq(attachments.taskId, taskId));
+      .where(and(eq(attachments.entityType, entityType), eq(attachments.entityId, entityId)));
   }
 
-  async findOne(id: number, userId: number): Promise<Attachment> {
+  /**
+   * Get single attachment by ID
+   */
+  async findOne(id: number) {
     const [attachment] = await this.db
       .select()
       .from(attachments)
       .where(eq(attachments.id, id));
 
     if (!attachment) {
-      throw new NotFoundException(`Attachment với ID ${id} không tồn tại`);
-    }
-
-    // Get task to check access
-    const [task] = await this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, attachment.taskId));
-
-    const hasAccess = await this.checkUserInProject(userId, task.projectId);
-    if (!hasAccess) {
-      throw new ForbiddenException('Bạn không có quyền xem attachment này');
+      throw new NotFoundException('Attachment not found');
     }
 
     return attachment;
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const attachment = await this.findOne(id, userId);
-
-    // Get task to check permissions
-    const [task] = await this.db
+  /**
+   * Get user avatar attachment
+   */
+  async findUserAvatar(userId: number) {
+    const [attachment] = await this.db
       .select()
-      .from(tasks)
-      .where(eq(tasks.id, attachment.taskId));
+      .from(attachments)
+      .where(and(eq(attachments.entityType, 'user_avatar'), eq(attachments.uploadedBy, userId)))
+      .orderBy(attachments.createdAt)
+      .limit(1);
 
-    const isAdmin = await this.checkPermission(task.projectId, userId, ['admin']);
-    const isUploader = attachment.uploadedBy === userId;
+    return attachment || null;
+  }
 
-    if (!isAdmin && !isUploader) {
-      throw new ForbiddenException('Bạn không có quyền xóa attachment này');
+  /**
+   * Delete attachment
+   */
+  async remove(id: number, userId: number) {
+    const attachment = await this.findOne(id);
+
+    // Check permission: only uploader can delete
+    if (attachment.uploadedBy !== userId) {
+      throw new ForbiddenException('You do not have permission to delete this attachment');
     }
 
-    // TODO: Delete actual file from storage (S3, etc.)
-    // await this.deleteFileFromStorage(attachment.fileUrl);
+    // Delete from Cloudinary
+    await this.cloudinary.deleteFile(attachment.publicId);
 
+    // Delete from database
     await this.db.delete(attachments).where(eq(attachments.id, id));
+
+    return { message: 'Attachment deleted successfully' };
   }
 
-  // Helper
-  private async checkUserInProject(userId: number, projectId: number): Promise<boolean> {
-    const [member] = await this.db
-      .select()
-      .from(projectMembers)
-      .where(
-        and(
-          eq(projectMembers.userId, userId),
-          eq(projectMembers.projectId, projectId),
-          eq(projectMembers.status, 'active')
-        )
-      );
+  /**
+   * Delete all attachments for an entity (used when deleting entity)
+   */
+  async removeByEntity(entityType: string, entityId: number) {
+    const entityAttachments = await this.findByEntity(entityType, entityId);
 
-    return !!member;
-  }
+    for (const attachment of entityAttachments) {
+      // Delete from Cloudinary
+      await this.cloudinary.deleteFile(attachment.publicId);
 
-  private async checkPermission(
-    projectId: number, 
-    userId: number, 
-    allowedRoles: string[]
-  ): Promise<boolean> {
-    const [member] = await this.db
-      .select()
-      .from(projectMembers)
-      .where(
-        and(
-          eq(projectMembers.projectId, projectId),
-          eq(projectMembers.userId, userId),
-          eq(projectMembers.status, 'active')
-        )
-      );
-
-    if (!member) {
-      return false;
+      // Delete from database
+      await this.db.delete(attachments).where(eq(attachments.id, attachment.id));
     }
 
-    return allowedRoles.includes(member.role);
+    return { message: `${entityAttachments.length} attachments deleted successfully` };
   }
 }

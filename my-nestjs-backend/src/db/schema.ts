@@ -91,6 +91,7 @@ export const users = pgTable(
     passwordHash: varchar('password_hash', { length: 255 }),
     fullName: varchar('full_name', { length: 100 }),
     avatarUrl: varchar('avatar_url', { length: 500 }),
+    avatarPublicId: varchar('avatar_public_id', { length: 255 }), // Cloudinary public_id for avatar
     status: userStatusEnum('status').notNull().default('unverified'),
     emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
@@ -297,26 +298,32 @@ export const sprintComments = pgTable(
 );
 
 // -----------------------------------------------------
-// Table: attachments
+// Table: attachments (Updated for Cloudinary)
 // -----------------------------------------------------
 export const attachments = pgTable(
   'attachments',
   {
     id: bigserial('id', { mode: 'number' }).primaryKey(),
-    taskId: bigint('task_id', { mode: 'number' })
-      .notNull()
-      .references(() => tasks.id, { onDelete: 'cascade' }),
+    publicId: varchar('public_id', { length: 255 }).notNull().unique(), // Cloudinary public_id
+    secureUrl: varchar('secure_url', { length: 1000 }).notNull(), // Cloudinary secure_url
+    resourceType: varchar('resource_type', { length: 50 }).notNull(), // 'image', 'raw', 'video'
+    format: varchar('format', { length: 10 }), // 'jpg', 'png', 'pdf', etc.
+    bytes: integer('bytes'), // File size in bytes
+    width: integer('width'), // Image width (if image)
+    height: integer('height'), // Image height (if image)
+
+    // Relationship - flexible for multiple entity types
     uploadedBy: bigint('uploaded_by', { mode: 'number' })
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    fileName: varchar('file_name', { length: 255 }).notNull(),
-    fileUrl: varchar('file_url', { length: 1000 }).notNull(),
-    fileSize: bigint('file_size', { mode: 'number' }),
-    mimeType: varchar('mime_type', { length: 100 }),
+    entityType: varchar('entity_type', { length: 50 }).notNull(), // 'user_avatar', 'task', 'project', 'comment'
+    entityId: bigint('entity_id', { mode: 'number' }), // ID of related entity (can be null for user_avatar)
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    taskIdx: index('idx_attachments_task').on(table.taskId),
+    publicIdIdx: index('idx_attachments_public_id').on(table.publicId),
+    entityIdx: index('idx_attachments_entity').on(table.entityType, table.entityId),
     uploaderIdx: index('idx_attachments_uploader').on(table.uploadedBy),
   })
 );
@@ -539,14 +546,12 @@ export const sprintCommentsRelations = relations(sprintComments, ({ one, many })
 }));
 
 export const attachmentsRelations = relations(attachments, ({ one }) => ({
-  task: one(tasks, {
-    fields: [attachments.taskId],
-    references: [tasks.id],
-  }),
   uploader: one(users, {
     fields: [attachments.uploadedBy],
     references: [users.id],
   }),
+  // Note: task, project, comment relations are handled via entityType/entityId
+  // We don't define explicit foreign keys here due to flexible relationship model
 }));
 
 export const labelsRelations = relations(labels, ({ one, many }) => ({
