@@ -1,0 +1,1844 @@
+{
+	"info": {
+		"_postman_id": "work-management-complete-001",
+		"name": "Work Management - Complete API Test",
+		"description": "Comprehensive API test collection for Work Management System with JWT authentication and auto notifications.\n\nTest Users:\n- Main User (Creator): dongocminh1210@gmail.com / Password123!\n- Test User (Receiver): ngocminhyc1@gmail.com / Password123!",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{creator_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "01. Authentication",
+			"item": [
+				{
+					"name": "Login Creator (dongocminh1210)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Login successful\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"creator_id\", jsonData.user.id);",
+									"    pm.environment.set(\"creator_token\", jsonData.accessToken);",
+									"    console.log(\"✅ Logged in as Creator:\", jsonData.user.email);",
+									"    console.log(\"   User ID:\", jsonData.user.id);",
+									"    console.log(\"   Token saved\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emailOrUsername\": \"dongocminh1210@gmail.com\",\n  \"password\": \"Password123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/login",
+							"host": ["{{base_url}}"],
+							"path": ["users", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Receiver (ngocminhyc1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Login successful\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"receiver_id\", jsonData.user.id);",
+									"    pm.environment.set(\"receiver_token\", jsonData.accessToken);",
+									"    console.log(\"✅ Logged in as Receiver:\", jsonData.user.email);",
+									"    console.log(\"   User ID:\", jsonData.user.id);",
+									"    console.log(\"   Token saved\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emailOrUsername\": \"ngocminhyc1@gmail.com\",\n  \"password\": \"Password123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/login",
+							"host": ["{{base_url}}"],
+							"path": ["users", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email (POST)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{verification_token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/verify-email",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "verify-email"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Resend Verification Email",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/resend-verification",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "resend-verification"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "forgot-password"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"newPassword\": \"NewPassword123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "reset-password"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request Magic Link",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"dongocminh1210@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/magic-link/request",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "magic-link", "request"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request OTP",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"dongocminh1210@gmail.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/otp/request",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "otp", "request"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02. Users Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{creator_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{creator_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Updated Name\",\n  \"bio\": \"Updated bio\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{creator_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{creator_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"oldPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{creator_id}}/change-password",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{creator_id}}", "change-password"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03. Projects Management",
+			"item": [
+				{
+					"name": "Create Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Project created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"project_id\", jsonData.id);",
+									"    console.log(\"✅ Project created:\", jsonData.name);",
+									"    console.log(\"   Project ID:\", jsonData.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Project - Auto Notifications\",\n  \"key\": \"TPAN\",\n  \"description\": \"Project for testing all features and auto notifications\",\n  \"status\": \"active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/projects",
+							"host": ["{{base_url}}"],
+							"path": ["projects"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Projects",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects",
+							"host": ["{{base_url}}"],
+							"path": ["projects"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Projects By User",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects?userId={{creator_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["projects"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{creator_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project By ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project Details",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/details",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "details"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project Activities",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/activities?limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "activities"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Role in Project",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/role",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "role"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Projects",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/search?name=Test",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "search"],
+							"query": [
+								{
+									"key": "name",
+									"value": "Test"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Project Count",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/count",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "count"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Project",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Project - Updated\",\n  \"description\": \"Updated description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04. Project Members (Auto Notify)",
+			"item": [
+				{
+					"name": "Add Receiver to Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Member added\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"console.log(\"✅ Receiver invited to project\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": {{receiver_id}},\n  \"role\": \"member\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Receiver Accept Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Invitation accepted\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: added_to_project\");",
+									"console.log(\"   To: ngocminhyc1@gmail.com\");",
+									"console.log(\"   Message: 'Bạn được thêm vào dự án'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{receiver_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members/{{receiver_id}}/accept",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members", "{{receiver_id}}", "accept"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Project Members",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Members",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members/active",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members", "active"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users in Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Users retrieved successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"\\n👥 USERS IN PROJECT\");",
+									"    console.log(\"═══════════════════════════════════\");",
+									"    console.log(\"Total users:\", jsonData.length);",
+									"    console.log(\"\");",
+									"    jsonData.forEach((user, i) => {",
+									"        console.log(`${i+1}. ${user.fullName || user.username}`);",
+									"        console.log(`   Email: ${user.email}`);",
+									"        console.log(`   Role: ${user.role}`);",
+									"        console.log(`   Joined: ${new Date(user.joinedAt).toLocaleDateString()}`);",
+									"        console.log(\"\");",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members/users",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Member Role",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"developer\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members/{{receiver_id}}/role",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members", "{{receiver_id}}", "role"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05. Sprints (Auto Notify)",
+			"item": [
+				{
+					"name": "Create Sprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sprint created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"sprint_id\", jsonData.id);",
+									"    console.log(\"✅ Sprint created:\", jsonData.name);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: sprint_created\");",
+									"console.log(\"   To: ngocminhyc1@gmail.com (all project members)\");",
+									"console.log(\"   Message: 'Sprint mới được tạo'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{project_id}},\n  \"name\": \"Sprint 1 - Auto Notify Test\",\n  \"goal\": \"Test all notification features\",\n  \"startDate\": \"2026-01-10\",\n  \"endDate\": \"2026-01-24\",\n  \"status\": \"planned\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/sprints",
+							"host": ["{{base_url}}"],
+							"path": ["sprints"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Sprints by Project",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints?projectId={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["sprints"],
+							"query": [
+								{
+									"key": "projectId",
+									"value": "{{project_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sprint By ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Sprint",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Sprint 1 - Updated\",\n  \"goal\": \"Updated goal\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Start Sprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sprint started\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: sprint_status_changed\");",
+									"console.log(\"   To: All project members\");",
+									"console.log(\"   Message: 'Sprint đã chuyển từ Lên kế hoạch sang Đang hoạt động'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}/start",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}", "start"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Sprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sprint completed\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: sprint_status_changed\");",
+									"console.log(\"   Message: 'Sprint đã chuyển từ Đang hoạt động sang Hoàn thành'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}/complete",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}", "complete"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Sprint",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}", "cancel"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "06. Tasks (Auto Notify)",
+			"item": [
+				{
+					"name": "Create Task (Assign to Receiver)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"task_id\", jsonData.id);",
+									"    console.log(\"✅ Task created:\", jsonData.title);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATIONS SENT (2):\");",
+									"console.log(\"   1. Type: task_created\");",
+									"console.log(\"      To: All project members\");",
+									"console.log(\"      Message: 'Task mới được tạo'\");",
+									"console.log(\"   2. Type: task_assigned\");",
+									"console.log(\"      To: ngocminhyc1@gmail.com (assignee)\");",
+									"console.log(\"      Message: 'Task được gán cho bạn'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{project_id}},\n  \"sprintId\": {{sprint_id}},\n  \"title\": \"Test Task - Auto Notifications\",\n  \"description\": \"This task will test all notification features\",\n  \"type\": \"task\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"assigneeId\": {{receiver_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Tasks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tasks By Project",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks?projectId={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"],
+							"query": [
+								{
+									"key": "projectId",
+									"value": "{{project_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tasks By Sprint",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks?sprintId={{sprint_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"],
+							"query": [
+								{
+									"key": "sprintId",
+									"value": "{{sprint_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tasks By Assignee",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks?assigneeId={{receiver_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"],
+							"query": [
+								{
+									"key": "assigneeId",
+									"value": "{{receiver_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Subtasks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/subtasks",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "subtasks"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Assignee Info",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Assignee info retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    ",
+									"    if (jsonData) {",
+									"        console.log(\"\\n👤 TASK ASSIGNEE\");",
+									"        console.log(\"═══════════════════════════════════\");",
+									"        console.log(\"Name:\", jsonData.fullName || jsonData.username);",
+									"        console.log(\"Email:\", jsonData.email);",
+									"        console.log(\"Username:\", jsonData.username);",
+									"        console.log(\"User ID:\", jsonData.userId);",
+									"        console.log(\"Status:\", jsonData.status);",
+									"    } else {",
+									"        console.log(\"\\n⚠️  No assignee for this task\");",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/assignee",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "assignee"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Task Title\",\n  \"description\": \"Updated description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Status (todo -> in_progress)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status updated\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_status_changed\");",
+									"console.log(\"   To: Assignee + watchers\");",
+									"console.log(\"   Message: 'Task đã chuyển từ Cần làm sang Đang làm'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"in_progress\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Status (in_progress -> done)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status updated to done\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_status_changed\");",
+									"console.log(\"   Message: 'Task đã chuyển từ Đang làm sang Hoàn thành'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"done\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Task to User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_assigned\");",
+									"console.log(\"   To: New assignee\");",
+									"console.log(\"   Message: 'Task được gán cho bạn'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"assigneeId\": {{receiver_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/assign",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "assign"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Priority",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"priority\": \"critical\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/priority",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "priority"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task deleted\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_deleted\");",
+									"console.log(\"   To: Assignee + watchers\");",
+									"console.log(\"   Message: 'Task đã bị xóa khỏi dự án'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "07. Comments (Auto Notify)",
+			"item": [
+				{
+					"name": "Create Comment on Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Comment created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"comment_id\", jsonData.id);",
+									"});",
+									"console.log(\"🔔 AUTO NOTIFICATION SENT:\");",
+									"console.log(\"   Type: comment_added\");",
+									"console.log(\"   To: Assignee (if not commenter)\");",
+									"console.log(\"   Message: 'Có comment mới trên task của bạn'\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"taskId\": {{task_id}},\n  \"content\": \"Great work on this task! Keep it up 👍\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/comments",
+							"host": ["{{base_url}}"],
+							"path": ["comments"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comments By Task",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/comments?taskId={{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["comments"],
+							"query": [
+								{
+									"key": "taskId",
+									"value": "{{task_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comment By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/comments/{{comment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["comments", "{{comment_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comment Replies",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/comments/{{comment_id}}/replies",
+							"host": ["{{base_url}}"],
+							"path": ["comments", "{{comment_id}}", "replies"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Comment",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Updated comment content\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/comments/{{comment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["comments", "{{comment_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/comments/{{comment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["comments", "{{comment_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "08. Notifications",
+			"item": [
+				{
+					"name": "Get All Notifications (Receiver)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Notifications retrieved\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"\\n📊 NOTIFICATION SUMMARY FOR RECEIVER\");",
+									"    console.log(\"═══════════════════════════════════════\");",
+									"    console.log(\"Total notifications:\", jsonData.length);",
+									"    console.log(\"\");",
+									"    ",
+									"    var types = {};",
+									"    jsonData.forEach(n => {",
+									"        types[n.type] = (types[n.type] || 0) + 1;",
+									"    });",
+									"    ",
+									"    console.log(\"Breakdown by type:\");",
+									"    Object.keys(types).sort().forEach(type => {",
+									"        console.log(`  ✓ ${type}: ${types[type]}`);",
+									"    });",
+									"    ",
+									"    console.log(\"\");",
+									"    console.log(\"Recent notifications:\");",
+									"    jsonData.slice(0, 5).forEach((n, i) => {",
+									"        console.log(`  ${i+1}. [${n.type}] ${n.title}`);",
+									"        console.log(`     ${n.message}`);",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{receiver_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{receiver_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{receiver_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Notifications (Receiver)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{receiver_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{receiver_id}}/unread",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{receiver_id}}", "unread"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count (Receiver)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Unread count retrieved\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"📬 Unread notifications:\", jsonData.count);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{receiver_id}}/count",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{receiver_id}}", "count"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{receiver_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/{{notification_id}}/read",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "{{notification_id}}", "read"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{receiver_id}}/read-all",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{receiver_id}}", "read-all"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Notification",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{receiver_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/{{notification_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "{{notification_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete All Notifications",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{receiver_id}}/all",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{receiver_id}}", "all"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "09. Labels",
+			"item": [
+				{
+					"name": "Create Label",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Label created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"label_id\", jsonData.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{project_id}},\n  \"name\": \"Bug\",\n  \"color\": \"#FF0000\",\n  \"description\": \"Bug label\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/labels",
+							"host": ["{{base_url}}"],
+							"path": ["labels"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Labels By Project",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/labels?projectId={{project_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["labels"],
+							"query": [
+								{
+									"key": "projectId",
+									"value": "{{project_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Label By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/labels/{{label_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["labels", "{{label_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Label",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Critical Bug\",\n  \"color\": \"#CC0000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/labels/{{label_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["labels", "{{label_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Label",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/labels/{{label_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["labels", "{{label_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Label to Task",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"labelId\": {{label_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/labels",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "labels"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Labels",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/labels",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "labels"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Label from Task",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/labels/{{label_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "labels", "{{label_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "10. Attachments",
+			"item": [
+				{
+					"name": "Create Attachment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Attachment created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"attachment_id\", jsonData.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"taskId\": {{task_id}},\n  \"fileName\": \"document.pdf\",\n  \"fileUrl\": \"https://example.com/files/document.pdf\",\n  \"fileSize\": 1024000,\n  \"fileType\": \"application/pdf\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/attachments",
+							"host": ["{{base_url}}"],
+							"path": ["attachments"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attachments By Task",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/attachments?taskId={{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["attachments"],
+							"query": [
+								{
+									"key": "taskId",
+									"value": "{{task_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Attachment By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/attachments/{{attachment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["attachments", "{{attachment_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Attachment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/attachments/{{attachment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["attachments", "{{attachment_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
