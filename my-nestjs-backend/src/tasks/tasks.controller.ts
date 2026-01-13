@@ -12,15 +12,26 @@ import {
   ParseIntPipe,
   Query,
   Patch,
+  UseInterceptors,
+  UploadedFile,
+  HttpException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AttachmentsService } from '../attachments/attachments.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { FileValidationPipe } from '../common/pipes/file-validation.pipe';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(
+    private readonly tasksService: TasksService,
+    private readonly attachmentsService: AttachmentsService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -137,5 +148,85 @@ export class TasksController {
     @CurrentUser('userId') userId: number,
   ) {
     return this.tasksService.remove(id, userId);
+  }
+
+  /**
+   * Upload task attachment
+   */
+  @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(
+    @Param('id', ParseIntPipe) taskId: number,
+    @UploadedFile(new FileValidationPipe()) file: Express.Multer.File,
+    @CurrentUser('userId') userId: number,
+  ) {
+    // Verify task exists and user has access
+    await this.tasksService.findOne(taskId, userId);
+    // TODO: Add permission check (user must be project member)
+
+    const attachment = await this.attachmentsService.create(file, {
+      uploadedBy: userId,
+      entityType: 'task',
+      entityId: taskId,
+    });
+
+    return {
+      message: 'File uploaded successfully',
+      attachment: {
+        id: attachment.id,
+        url: attachment.secureUrl,
+        thumbnail:
+          attachment.resourceType === 'image'
+            ? this.cloudinaryService.getThumbnailUrl(attachment.publicId)
+            : null,
+        filename: file.originalname,
+        size: attachment.bytes,
+        type: attachment.format,
+        uploadedAt: attachment.createdAt,
+      },
+    };
+  }
+
+  /**
+   * Get all task attachments
+   */
+  @Get(':id/attachments')
+  async getAttachments(@Param('id', ParseIntPipe) taskId: number) {
+    const attachments = await this.attachmentsService.findByEntity('task', taskId);
+
+    return {
+      count: attachments.length,
+      attachments: attachments.map((att) => ({
+        id: att.id,
+        url: att.secureUrl,
+        thumbnail:
+          att.resourceType === 'image' ? this.cloudinaryService.getThumbnailUrl(att.publicId) : null,
+        size: att.bytes,
+        format: att.format,
+        resourceType: att.resourceType,
+        uploadedBy: att.uploadedBy,
+        uploadedAt: att.createdAt,
+      })),
+    };
+  }
+
+  /**
+   * Delete task attachment
+   */
+  @Delete(':taskId/attachments/:attachmentId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAttachment(
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    // Verify attachment belongs to this task
+    const attachment = await this.attachmentsService.findOne(attachmentId);
+    if (attachment.entityType !== 'task' || attachment.entityId !== taskId) {
+      throw new HttpException('Attachment not found for this task', HttpStatus.NOT_FOUND);
+    }
+
+    await this.attachmentsService.remove(attachmentId, userId);
+    return;
   }
 }
