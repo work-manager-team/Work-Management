@@ -510,6 +510,8 @@ npm install
 npm run build
 ```
 
+**Note:** Build đã được test và pass ✅ (TypeScript strict mode)
+
 ### 3. Deploy to Vercel
 
 ```bash

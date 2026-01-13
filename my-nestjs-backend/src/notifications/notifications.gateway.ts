@@ -62,7 +62,7 @@ export class NotificationsGateway
       if (!this.userSockets.has(userId)) {
         this.userSockets.set(userId, new Set());
       }
-      this.userSockets.get(userId).add(client.id);
+      this.userSockets.get(userId)?.add(client.id);
 
       // Store userId in socket data for later use
       client.data.userId = userId;
@@ -71,7 +71,7 @@ export class NotificationsGateway
       client.join(`user:${userId}`);
 
       this.logger.log(`✅ Client ${client.id} connected (User ${userId})`);
-      this.logger.debug(`Active sockets for User ${userId}: ${this.userSockets.get(userId).size}`);
+      this.logger.debug(`Active sockets for User ${userId}: ${this.userSockets.get(userId)?.size}`);
 
       // Send connection confirmation
       client.emit('connected', {
@@ -88,10 +88,13 @@ export class NotificationsGateway
     const userId = client.data.userId;
 
     if (userId && this.userSockets.has(userId)) {
-      this.userSockets.get(userId).delete(client.id);
+      const sockets = this.userSockets.get(userId);
+      if (sockets) {
+        sockets.delete(client.id);
 
-      if (this.userSockets.get(userId).size === 0) {
-        this.userSockets.delete(userId);
+        if (sockets.size === 0) {
+          this.userSockets.delete(userId);
+        }
       }
 
       this.logger.log(`❌ Client ${client.id} disconnected (User ${userId})`);
