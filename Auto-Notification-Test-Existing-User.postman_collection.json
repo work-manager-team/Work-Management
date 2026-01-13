@@ -1,0 +1,739 @@
+{
+	"info": {
+		"_postman_id": "auto-notify-existing-user-001",
+		"name": "Auto Notification Test - Existing User",
+		"description": "Test collection using existing user account: dongocminh1210@gmail.com",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Setup - Login & Get User Info",
+			"item": [
+				{
+					"name": "1. Login Main User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Login successful\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"main_user_id\", jsonData.user.id);",
+									"    pm.environment.set(\"main_user_token\", jsonData.accessToken);",
+									"    console.log(\"✅ Logged in as:\", jsonData.user.username);",
+									"    console.log(\"   User ID:\", jsonData.user.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emailOrUsername\": \"dongocminh1210@gmail.com\",\n  \"password\": \"Password123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/login",
+							"host": ["{{base_url}}"],
+							"path": ["users", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Get All Projects",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Projects retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.length > 0) {",
+									"        pm.environment.set(\"project_id\", jsonData[0].id);",
+									"        console.log(\"✅ Using project:\", jsonData[0].name);",
+									"        console.log(\"   Project ID:\", jsonData[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects?userId={{main_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["projects"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{main_user_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3. Create New Test User (for notifications)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Test user created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"test_user_id\", jsonData.user.id);",
+									"    pm.environment.set(\"test_user_token\", jsonData.accessToken);",
+									"    console.log(\"✅ Test user created:\", jsonData.user.username);",
+									"    console.log(\"   User ID:\", jsonData.user.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testnotify{{$timestamp}}@test.com\",\n  \"username\": \"testnotify{{$timestamp}}\",\n  \"password\": \"Password123!\",\n  \"fullName\": \"Test Notification User\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Test 1 - Add Member & Notification",
+			"item": [
+				{
+					"name": "Add Test User to Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Member added successfully\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    console.log(\"✅ Test user invited to project\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": {{test_user_id}},\n  \"role\": \"member\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Test User Accept Invitation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Invitation accepted\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: added_to_project\");",
+									"console.log(\"   To: Test User\");",
+									"console.log(\"   Message: 'Bạn được thêm vào dự án'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/projects/{{project_id}}/members/{{test_user_id}}/accept",
+							"host": ["{{base_url}}"],
+							"path": ["projects", "{{project_id}}", "members", "{{test_user_id}}", "accept"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Test User Notifications",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Notification received\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.length).to.be.above(0);",
+									"    var addedNotif = jsonData.find(n => n.type === 'added_to_project');",
+									"    pm.expect(addedNotif).to.not.be.undefined;",
+									"    console.log(\"\\n📬 Notification found:\");",
+									"    console.log(\"   Type:\", addedNotif.type);",
+									"    console.log(\"   Title:\", addedNotif.title);",
+									"    console.log(\"   Message:\", addedNotif.message);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Test 2 - Sprint & Task Notifications",
+			"item": [
+				{
+					"name": "Create Sprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sprint created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"sprint_id\", jsonData.id);",
+									"    console.log(\"✅ Sprint created:\", jsonData.name);",
+									"});",
+									"console.log(\"✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: sprint_created\");",
+									"console.log(\"   To: Test User\");",
+									"console.log(\"   Message: 'Sprint mới được tạo'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{project_id}},\n  \"name\": \"Auto Notification Test Sprint\",\n  \"goal\": \"Test all notification features\",\n  \"startDate\": \"2026-01-10\",\n  \"endDate\": \"2026-01-24\",\n  \"status\": \"planned\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/sprints",
+							"host": ["{{base_url}}"],
+							"path": ["sprints"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Task (assign to Test User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"task_id\", jsonData.id);",
+									"    console.log(\"✅ Task created:\", jsonData.title);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATIONS SENT (2):\");",
+									"console.log(\"   1. Type: task_created\");",
+									"console.log(\"      To: Test User\");",
+									"console.log(\"      Message: 'Task mới được tạo'\");",
+									"console.log(\"   2. Type: task_assigned\");",
+									"console.log(\"      To: Test User\");",
+									"console.log(\"      Message: 'Task được gán cho bạn'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{project_id}},\n  \"sprintId\": {{sprint_id}},\n  \"title\": \"Test Notification Task\",\n  \"description\": \"This task tests auto notifications\",\n  \"type\": \"task\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"assigneeId\": {{test_user_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Status (todo -> in_progress)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status updated\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_status_changed\");",
+									"console.log(\"   To: Test User\");",
+									"console.log(\"   Message: 'Task đã chuyển từ Cần làm sang Đang làm'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"in_progress\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Status (in_progress -> done)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status updated to done\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_status_changed\");",
+									"console.log(\"   To: Test User\");",
+									"console.log(\"   Message: 'Task đã chuyển từ Đang làm sang Hoàn thành'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"done\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Task Notifications",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task notifications received\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"\\n📊 TASK NOTIFICATION SUMMARY:\");",
+									"    console.log(\"══════════════════════════════\");",
+									"    var taskNotifs = jsonData.filter(n => n.type.includes('task'));",
+									"    console.log(\"Total task notifications:\", taskNotifs.length);",
+									"    taskNotifs.forEach((n, i) => {",
+									"        console.log(`${i+1}. [${n.type}] ${n.message}`);",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Test 3 - Comment Notification",
+			"item": [
+				{
+					"name": "Main User Add Comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Comment added\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: comment_added\");",
+									"console.log(\"   To: Test User (assignee)\");",
+									"console.log(\"   Message: 'Có comment mới trên task của bạn'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"taskId\": {{task_id}},\n  \"content\": \"Great work! This task looks good 👍\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/comments",
+							"host": ["{{base_url}}"],
+							"path": ["comments"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Check Comment Notification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Comment notification received\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var commentNotif = jsonData.find(n => n.type === 'comment_added');",
+									"    pm.expect(commentNotif).to.not.be.undefined;",
+									"    console.log(\"\\n📬 Comment Notification:\");",
+									"    console.log(\"   Title:\", commentNotif.title);",
+									"    console.log(\"   Message:\", commentNotif.message);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Test 4 - Sprint Status Notifications",
+			"item": [
+				{
+					"name": "Start Sprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sprint started\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: sprint_status_changed\");",
+									"console.log(\"   To: Test User\");",
+									"console.log(\"   Message: 'Sprint đã chuyển từ Lên kế hoạch sang Đang hoạt động'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}/start",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}", "start"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Sprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sprint completed\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: sprint_status_changed\");",
+									"console.log(\"   To: Test User\");",
+									"console.log(\"   Message: 'Sprint đã chuyển từ Đang hoạt động sang Hoàn thành'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sprints/{{sprint_id}}/complete",
+							"host": ["{{base_url}}"],
+							"path": ["sprints", "{{sprint_id}}", "complete"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Test 5 - Delete Notification",
+			"item": [
+				{
+					"name": "Create Task to Delete",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"task_to_delete\", jsonData.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": {{project_id}},\n  \"sprintId\": {{sprint_id}},\n  \"title\": \"Task Will Be Deleted\",\n  \"description\": \"Test deletion notification\",\n  \"type\": \"bug\",\n  \"status\": \"todo\",\n  \"priority\": \"low\",\n  \"assigneeId\": {{test_user_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task deleted\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"console.log(\"\\n✅ NOTIFICATION SENT:\");",
+									"console.log(\"   Type: task_deleted\");",
+									"console.log(\"   To: Test User (assignee)\");",
+									"console.log(\"   Message: 'Task đã bị xóa khỏi dự án'\")"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_to_delete}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_to_delete}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Final Summary",
+			"item": [
+				{
+					"name": "Get All Notifications Summary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"All notifications received\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"\\n\" + \"=\".repeat(50));",
+									"    console.log(\"📊 FINAL NOTIFICATION SUMMARY\");",
+									"    console.log(\"=\".repeat(50));",
+									"    console.log(\"\\nTotal notifications:\", jsonData.length);",
+									"    console.log(\"\");",
+									"    ",
+									"    var byType = {};",
+									"    jsonData.forEach(n => {",
+									"        byType[n.type] = (byType[n.type] || 0) + 1;",
+									"    });",
+									"    ",
+									"    console.log(\"Breakdown by type:\");",
+									"    Object.keys(byType).sort().forEach(type => {",
+									"        console.log(`  ✓ ${type}: ${byType[type]}`);",
+									"    });",
+									"    ",
+									"    console.log(\"\\nExpected notifications:\");",
+									"    console.log(\"  ✓ added_to_project: 1\");",
+									"    console.log(\"  ✓ sprint_created: 1\");",
+									"    console.log(\"  ✓ task_created: 2\");",
+									"    console.log(\"  ✓ task_assigned: 2\");",
+									"    console.log(\"  ✓ task_status_changed: 2\");",
+									"    console.log(\"  ✓ comment_added: 1\");",
+									"    console.log(\"  ✓ sprint_status_changed: 2\");",
+									"    console.log(\"  ✓ task_deleted: 1\");",
+									"    console.log(\"  ──────────────────\");",
+									"    console.log(\"  Total: ~12 notifications\");",
+									"    console.log(\"\");",
+									"    console.log(\"=\".repeat(50));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{test_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{test_user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Unread count retrieved\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"\\n📬 Unread notifications:\", jsonData.count);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/user/{{test_user_id}}/unread/count",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "user", "{{test_user_id}}", "unread", "count"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
