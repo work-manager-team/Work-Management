@@ -112,6 +112,15 @@ export class TasksController {
     return this.tasksService.assignTask(id, assigneeId, userId);
   }
 
+  @Patch(':id/assign-by-email')
+  assignTaskByEmail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('email') email: string,
+    @CurrentUser('userId') userId: number,
+  ) {
+    return this.tasksService.assignTaskByEmail(id, email, userId);
+  }
+
   @Patch(':id/priority')
   updatePriority(
     @Param('id', ParseIntPipe) id: number,

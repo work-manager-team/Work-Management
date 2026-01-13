@@ -1523,7 +1523,7 @@
 					"response": []
 				},
 				{
-					"name": "Assign Task",
+					"name": "Assign Task (by ID)",
 					"request": {
 						"method": "PATCH",
 						"header": [],
@@ -1540,6 +1540,44 @@
 							"raw": "{{base_url}}/tasks/{{task_id}}/assign",
 							"host": ["{{base_url}}"],
 							"path": ["tasks", "{{task_id}}", "assign"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Task (by Email) - NEW",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Task assigned by email\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"✅ Task assigned to:\", pm.environment.get(\"receiver_email\"));",
+									"    console.log(\"🔔 Notification sent via WebSocket!\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{receiver_email}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}/assign-by-email",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}", "assign-by-email"]
 						}
 					},
 					"response": []

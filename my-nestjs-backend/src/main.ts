@@ -13,12 +13,19 @@ export const createNestServer = async (expressInstance) => {
     new ExpressAdapter(expressInstance),
   );
 
-  // Enable CORS - Allow all origins for development
+  // Enable CORS - Allow specific origins with credentials
   app.enableCors({
-    origin: '*', // Allow all origins
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5173',
+      'https://work-management-chi.vercel.app',
+      /\.vercel\.app$/, // Allow all Vercel preview deployments
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-    credentials: false, // Must be false when origin is '*'
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
+    credentials: true, // Allow credentials (cookies, authorization headers)
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
