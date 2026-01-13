@@ -380,6 +380,64 @@ export class TasksService {
     return updatedTask;
   }
 
+  async assignTaskByEmail(
+    id: number,
+    assigneeEmail: string,
+    userId: number
+  ): Promise<Task> {
+    const task = await this.findOne(id, userId);
+
+    // Check permission
+    const canAssign = await this.checkPermission(task.projectId, userId, ['member', 'admin']);
+    if (!canAssign) {
+      throw new ForbiddenException('Bạn không có quyền assign task');
+    }
+
+    // Find user by email
+    const userResults = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, assigneeEmail));
+
+    if (userResults.length === 0) {
+      throw new NotFoundException(`Không tìm thấy user với email: ${assigneeEmail}`);
+    }
+
+    const assignee = userResults[0];
+
+    // Validate assignee is in project
+    const assigneeInProject = await this.checkUserInProject(assignee.id, task.projectId);
+    if (!assigneeInProject) {
+      throw new BadRequestException(`User ${assigneeEmail} không phải member của project này`);
+    }
+
+    const result = await this.db
+      .update(tasks)
+      .set({
+        assigneeId: assignee.id,
+        updatedAt: new Date()
+      })
+      .where(eq(tasks.id, id))
+      .returning();
+
+    const updatedTask = result[0];
+
+    // Send notification to assignee
+    try {
+      await this.notificationHelper.notifyTaskAssigned(
+        updatedTask.id,
+        updatedTask.title,
+        assignee.id,
+        userId,
+        updatedTask.projectId
+      );
+    } catch (error) {
+      console.error('Failed to send task assignment notification:', error);
+    }
+
+    return updatedTask;
+  }
+
   async updatePriority(
     id: number,
     priority: string,

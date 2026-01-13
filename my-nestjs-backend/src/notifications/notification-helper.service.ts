@@ -1,14 +1,17 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { NeonHttpDatabase } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE } from '../db/database.module';
 import { notifications, projectMembers } from '../db/schema';
 import * as schema from '../db/schema';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationHelperService {
   constructor(
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private notificationsGateway: NotificationsGateway,
   ) {}
 
   async notifyUser(
@@ -19,7 +22,7 @@ export class NotificationHelperService {
     taskId?: number,
     projectId?: number,
   ): Promise<void> {
-    await this.db.insert(notifications).values({
+    const result = await this.db.insert(notifications).values({
       userId,
       type,
       title,
@@ -27,7 +30,26 @@ export class NotificationHelperService {
       taskId: taskId || null,
       projectId: projectId || null,
       isRead: false,
-    });
+    }).returning();
+
+    const notification = result[0];
+
+    // Send real-time notification via WebSocket
+    try {
+      this.notificationsGateway.sendNotificationToUser(userId, {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        taskId: notification.taskId,
+        projectId: notification.projectId,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+      });
+    } catch (error) {
+      console.error('Failed to send WebSocket notification:', error);
+      // Don't throw - notification is still saved in DB
+    }
   }
 
   async notifyProjectMembers(
