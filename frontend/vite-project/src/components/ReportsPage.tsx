@@ -25,7 +25,6 @@ interface ReportsPageProps {
 }
 
 const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
-    const [reportType, setReportType] = useState('summary');
     const [projects, setProjects] = useState<ProjectDetail[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalStats, setTotalStats] = useState({
@@ -53,13 +52,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
             }
 
             // First, get all projects
-            const projectsResponse = await apiCall(`http://work-management-chi.vercel.app/projects?userId=${userId}`);
+            const projectsResponse = await apiCall(`https://work-management-chi.vercel.app/projects?userId=${userId}`);
             const projectsData = await projectsResponse.json();
             const projectsList = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
 
             // Then fetch details for each project
             const projectDetailsPromises = projectsList.map((project: any) =>
-                apiCall(`http://work-management-chi.vercel.app/projects/${project.id}/details`)
+                apiCall(`https://work-management-chi.vercel.app/projects/${project.id}/details`)
                     .then(res => res.json())
                     .catch(err => {
                         console.error('Error fetching project details:', err);
@@ -93,39 +92,6 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ onLogout }) => {
         <Layout onLogout={onLogout}>
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6 text-gray-800">Reports</h1>
-
-                {/* Report Type Selector */}
-                <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => setReportType('summary')}
-                            className={`px-6 py-2 rounded font-medium transition ${reportType === 'summary'
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                                }`}
-                        >
-                            Summary
-                        </button>
-                        <button
-                            onClick={() => setReportType('detailed')}
-                            className={`px-6 py-2 rounded font-medium transition ${reportType === 'detailed'
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                                }`}
-                        >
-                            Detailed
-                        </button>
-                        <button
-                            onClick={() => setReportType('analytics')}
-                            className={`px-6 py-2 rounded font-medium transition ${reportType === 'analytics'
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                                }`}
-                        >
-                            Analytics
-                        </button>
-                    </div>
-                </div>
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-4 gap-4 mb-6">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Users, Plus, MoreHorizontal, Calendar, Bell, Folder, Settings, Table, User, LogOut } from 'lucide-react';
 import { ChevronDown } from 'lucide-react'
@@ -10,6 +10,40 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string>('');
+
+    useEffect(() => {
+        fetchAvatarUrl();
+    }, []);
+
+    const fetchAvatarUrl = async () => {
+        try {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                const token = localStorage.getItem('accessToken');
+                if (token) {
+                    const response = await fetch(
+                        `https://work-management-chi.vercel.app/users/${user.id}/avatar`,
+                        {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        }
+                    );
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.avatar?.url) {
+                            setAvatarUrl(data.avatar.url);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching avatar:', error);
+        }
+    };
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -103,10 +137,14 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
                         <div className="relative">
                             <button
                                 onClick={() => setShowUserMenu(!showUserMenu)}
-                                className="flex items-center bg-white hover:bg-gray-100 text-gray-800 px-3 py-1.5 rounded font-medium transition"
+                                className="flex items-center justify-center bg-white hover:bg-gray-100 text-gray-800 rounded font-medium transition w-10 h-10"
                             >
-                                <div className="flex flex-col items-center bg-purple-500 text-white hover:bg-purple-600 p-2 rounded">
-                                    <User size={20} />
+                                <div className="flex items-center justify-center bg-purple-500 text-white w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User size={18} />
+                                    )}
                                 </div>
                             </button>
 

@@ -309,23 +309,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout }) => {
                                                     <p className="text-gray-800 px-4 py-2">@{profile.username}</p>
                                                 )}
                                             </div>
-
-                                            {/* Avatar URL */}
-                                            {isEditing && (
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Avatar URL
-                                                    </label>
-                                                    <input
-                                                        type="url"
-                                                        value={editedProfile?.avatarUrl || ''}
-                                                        onChange={(e) => setEditedProfile({ ...editedProfile, avatarUrl: e.target.value })}
-                                                        disabled={saving}
-                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
-                                                        placeholder="https://example.com/avatar.jpg"
-                                                    />
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 )}

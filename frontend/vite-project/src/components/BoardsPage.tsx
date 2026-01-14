@@ -57,7 +57,6 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const [selectedProject, setSelectedProject] = useState<string>('');
     const [selectedSprint, setSelectedSprint] = useState<string>('');
     const [sprints, setSprints] = useState<Sprint[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
     const [draggedTask, setDraggedTask] = useState<{ columnId: string; taskId: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -67,9 +66,11 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const [taskForm, setTaskForm] = useState({
         title: '',
         description: '',
-        priority: 'medium' as 'high' | 'medium' | 'low',
-        assigneeId: ''
+        priority: 'medium' as 'high' | 'medium' | 'low'
     });
+    const [assigneeEmail, setAssigneeEmail] = useState('');
+    const [showAssigneeEmailModal, setShowAssigneeEmailModal] = useState(false);
+    const [assigningTask, setAssigningTask] = useState(false);
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -80,6 +81,8 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
     const [assigneeInfo, setAssigneeInfo] = useState<{ id: string; name: string; email?: string } | null>(null);
     const [assigneeLoading, setAssigneeLoading] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+    const [taskIdToDelete, setTaskIdToDelete] = useState<string | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [columns, setColumns] = useState<BoardColumn[]>([
         { id: 'todo', title: 'TO DO', tasks: [] },
         { id: 'in_progress', title: 'IN PROGRESS', tasks: [] },
@@ -306,9 +309,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                     description: taskForm.description,
                     type: 'task',
                     priority: taskForm.priority,
-                    status: selectedColumnId || 'todo',
-                    // reporterId: reporterId,
-                    assigneeId: taskForm.assigneeId || null
+                    status: selectedColumnId || 'todo'
                 })
             });
 
@@ -316,13 +317,22 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                 const newTask = await response.json();
                 console.log('Task created:', newTask);
 
+                // Update state directly without full reload
+                const status = selectedColumnId || 'todo';
+                setColumns(columns.map(col => {
+                    if (col.id === status) {
+                        return {
+                            ...col,
+                            tasks: [...col.tasks, newTask]
+                        };
+                    }
+                    return col;
+                }));
+
                 // Reset form and close modal
-                setTaskForm({ title: '', description: '', priority: 'medium', assigneeId: '' });
+                setTaskForm({ title: '', description: '', priority: 'medium' });
                 setSelectedColumnId('');
                 setShowAddTaskModal(false);
-
-                // Refresh tasks
-                fetchTasks(selectedSprint);
             } else {
                 alert('Failed to create task');
             }
@@ -474,19 +484,75 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
         }
     };
 
-    const deleteTask = async (taskId: string) => {
-        if (!window.confirm('Are you sure you want to delete this task?')) return;
+    const assignTaskByEmail = async (taskId: string) => {
+        if (!assigneeEmail.trim()) {
+            setNotificationMessage('Please enter an email address');
+            setTimeout(() => setNotificationMessage(null), 3000);
+            return;
+        }
 
         try {
-            const response = await apiCall(`https://work-management-chi.vercel.app/tasks/${taskId}`, {
+            setAssigningTask(true);
+            const response = await apiCall(
+                `https://work-management-chi.vercel.app/tasks/${taskId}/assign-by-email`,
+                {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email: assigneeEmail })
+                }
+            );
+
+            if (response.ok) {
+                const updatedTask = await response.json();
+
+                // Update state directly - find and update the task
+                setColumns(columns.map(col => ({
+                    ...col,
+                    tasks: col.tasks.map(task =>
+                        task.id === taskId ? { ...task, assigneeId: updatedTask.assigneeId } : task
+                    )
+                })));
+
+                setNotificationMessage('Task assigned successfully!');
+                setAssigneeEmail('');
+                setShowAssigneeEmailModal(false);
+                setTimeout(() => setNotificationMessage(null), 3000);
+            } else {
+                const errorData = await response.json();
+                setNotificationMessage(errorData.message || 'Failed to assign task');
+                setTimeout(() => setNotificationMessage(null), 3000);
+            }
+        } catch (error) {
+            console.error('Error assigning task:', error);
+            setNotificationMessage('Error assigning task. Please try again.');
+            setTimeout(() => setNotificationMessage(null), 3000);
+        } finally {
+            setAssigningTask(false);
+        }
+    };
+
+    const deleteTask = async (taskId: string) => {
+        setTaskIdToDelete(taskId);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteTask = async () => {
+        if (!taskIdToDelete) return;
+
+        try {
+            const response = await apiCall(`https://work-management-chi.vercel.app/tasks/${taskIdToDelete}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
 
             if (response.ok) {
-                if (selectedSprint) {
-                    fetchTasks(selectedSprint);
-                }
+                // Update state directly - remove task from all columns
+                setColumns(columns.map(col => ({
+                    ...col,
+                    tasks: col.tasks.filter(task => task.id !== taskIdToDelete)
+                })));
+                setShowDeleteConfirm(false);
+                setTaskIdToDelete(null);
             }
         } catch (error) {
             console.error('Error deleting task:', error);
@@ -566,19 +632,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                             )}
                         </div>
 
-                        {/* Search */}
-                        <div className="flex items-center gap-3">
-                            <div className="relative flex-1 max-w-xs">
-                                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search tasks"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                />
-                            </div>
-                        </div>
+
                     </div>
                 </div>
 
@@ -665,6 +719,16 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                                     <MessageCircle size={14} />
                                                     <span>Comment</span>
                                                 </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedTask(task);
+                                                        setShowAssigneeEmailModal(true);
+                                                    }}
+                                                    className="mt-2 w-full flex items-center justify-center gap-2 py-1 text-xs text-gray-600 hover:text-blue-600 border border-gray-200 rounded hover:border-blue-300 transition"
+                                                >
+                                                    <Plus size={14} />
+                                                    <span>Assign Task</span>
+                                                </button>
                                             </div>
                                         ))}
                                         {column.tasks.length === 0 && (
@@ -706,7 +770,7 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                         type="text"
                                         value={taskForm.title}
                                         onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                                        placeholder="e.g., Implement user authentication"
+                                        placeholder="Task title"
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
@@ -739,20 +803,6 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                                         <option value="medium">Medium</option>
                                         <option value="high">High</option>
                                     </select>
-                                </div>
-
-                                {/* Assignee ID */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Assignee ID (optional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={taskForm.assigneeId}
-                                        onChange={(e) => setTaskForm({ ...taskForm, assigneeId: e.target.value })}
-                                        placeholder="Enter assignee ID"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
                                 </div>
                             </div>
 
@@ -925,10 +975,99 @@ const BoardsPage: React.FC<BoardsPageProps> = ({ onLogout }) => {
                     </div>
                 )}
 
+                {/* Assign Task by Email Modal */}
+                {showAssigneeEmailModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-800">Assign Task by Email</h2>
+                                <button
+                                    onClick={() => {
+                                        setShowAssigneeEmailModal(false);
+                                        setAssigneeEmail('');
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        User Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={assigneeEmail}
+                                        onChange={(e) => setAssigneeEmail(e.target.value)}
+                                        placeholder="Enter user email address"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setShowAssigneeEmailModal(false);
+                                        setAssigneeEmail('');
+                                    }}
+                                    disabled={assigningTask}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (selectedTask) {
+                                            assignTaskByEmail(selectedTask.id);
+                                        }
+                                    }}
+                                    disabled={assigningTask || !assigneeEmail.trim()}
+                                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {assigningTask ? 'Assigning...' : 'Assign Task'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Notification Toast */}
                 {notificationMessage && (
                     <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm animate-pulse">
                         {notificationMessage}
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                            <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Task?</h2>
+                            <p className="text-gray-600 mb-6">
+                                Are you sure you want to delete this task? This action cannot be undone.
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteConfirm(false);
+                                        setTaskIdToDelete(null);
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDeleteTask}
+                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

@@ -42,6 +42,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
         endDate: '',
     });
     const [creatingSprint, setCreatingSprint] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [sprintToDelete, setSprintToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         fetchProjects();
@@ -69,12 +71,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
 
             const data = await response.json();
             setProjects(data);
-
-            // Auto-select first project
-            if (data.length > 0) {
-                setSelectedProjectId(String(data[0].id));
-                fetchSprints(String(data[0].id));
-            }
         } catch (err) {
             console.error('Error fetching projects:', err);
         } finally {
@@ -279,14 +275,17 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
     };
 
     const deleteSprint = async (sprintId: string) => {
-        if (!confirm('Are you sure you want to delete this sprint?')) {
-            return;
-        }
+        setSprintToDelete(sprintId);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteSprint = async () => {
+        if (!sprintToDelete) return;
 
         try {
-            setUpdatingSprintId(sprintId);
+            setUpdatingSprintId(sprintToDelete);
             const response = await apiCall(
-                `https://work-management-chi.vercel.app/sprints/${sprintId}`,
+                `https://work-management-chi.vercel.app/sprints/${sprintToDelete}`,
                 {
                     method: 'DELETE',
                     headers: getAuthHeaders()
@@ -298,11 +297,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
             }
 
             // Remove from sprints list
-            const updatedSprints = sprints.filter(sprint => sprint.id !== sprintId);
+            const updatedSprints = sprints.filter(sprint => sprint.id !== sprintToDelete);
             setSprints(updatedSprints);
 
             // Remove from selected day sprints
-            const updatedSelectedSprints = selectedDaySprintss.filter(sprint => sprint.id !== sprintId);
+            const updatedSelectedSprints = selectedDaySprintss.filter(sprint => sprint.id !== sprintToDelete);
             setSelectedDaySprintss(updatedSelectedSprints);
 
             // Close modal if no more sprints for the day
@@ -311,7 +310,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
                 setSelectedDaySprintss([]);
             }
 
-            console.log('Sprint deleted:', sprintId);
+            console.log('Sprint deleted:', sprintToDelete);
+            setShowDeleteConfirm(false);
+            setSprintToDelete(null);
         } catch (error) {
             console.error('Error deleting sprint:', error);
             alert('Failed to delete sprint');
@@ -367,7 +368,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
                             </div>
                             <button
                                 onClick={() => setShowCreateSprintModal(true)}
-                                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-medium flex items-center gap-2 transition"
+                                disabled={!selectedProjectId}
+                                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-medium flex items-center gap-2 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
                                 <Plus size={20} />
                                 New Sprint
@@ -553,7 +555,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
                                     type="text"
                                     value={sprintFormData.name}
                                     onChange={(e) => setSprintFormData({ ...sprintFormData, name: e.target.value })}
-                                    placeholder="e.g., Sprint 5 - Core Features"
+                                    placeholder="Sprint name"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 />
                             </div>
@@ -563,7 +565,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
                                 <textarea
                                     value={sprintFormData.goal}
                                     onChange={(e) => setSprintFormData({ ...sprintFormData, goal: e.target.value })}
-                                    placeholder="e.g., Implement core e-commerce features"
+                                    placeholder="Sprint goal"
                                     rows={3}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                                 />
@@ -619,6 +621,36 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ onLogout }) => {
                                     )}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Sprint Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Sprint?</h2>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete this sprint? This action cannot be undone.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteConfirm(false);
+                                    setSprintToDelete(null);
+                                }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteSprint}
+                                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
