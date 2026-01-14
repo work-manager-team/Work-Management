@@ -1,0 +1,426 @@
+/* ============================================
+   pages/dashboard/components/popularTemplates.css
+   ============================================ */
+.popular-templates {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.templates-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.templates-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.templates-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.close-button {
+  color: #9ca3af;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.close-button:hover {
+  color: #6b7280;
+}
+
+.category-select {
+  width: 16rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+.category-select:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.template-card {
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  height: 8rem;
+  position: relative;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.template-card:hover {
+  opacity: 0.9;
+}
+
+.template-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: white;
+  color: #374151;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.template-title {
+  color: white;
+  font-weight: 500;
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.browse-all-container {
+  text-align: right;
+  margin-bottom: 1.5rem;
+}
+
+.browse-all-link {
+  color: #06b6d4;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.browse-all-link:hover {
+  color: #0891b2;
+}
+
+.filters-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.filter-select,
+.filter-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  width: 12rem;
+  font-size: 0.875rem;
+  background: white;
+}
+
+.filter-select {
+  cursor: pointer;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.filter-input::placeholder {
+  color: #9ca3af;
+}
+
+
+/* ============================================
+   pages/dashboard/components/workspaceInfo.css
+   ============================================ */
+.workspace-info {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.workspace-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.workspace-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(to bottom right, #34d399, #14b8a6);
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.workspace-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.workspace-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.workspace-button {
+  background: #22d3ee;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.workspace-button:hover {
+  background: #06b6d4;
+}
+
+.featured-board {
+  background: linear-gradient(to bottom right, #ec4899, #a855f7);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.featured-board-title {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+
+/* ============================================
+   pages/dashboard/components/createBoardButton.css
+   ============================================ */
+.create-board-container {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.create-board-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: color 0.2s;
+}
+
+.create-board-button:hover {
+  color: #1f2937;
+}
+
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 1280px) {
+  .templates-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .templates-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .filters-container {
+    flex-wrap: wrap;
+  }
+  
+  .workspace-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .kanban-board {
+    flex-direction: column;
+  }
+  
+  .kanban-column {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .workspace-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .filters-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-select,
+  .filter-input {
+    width: 100%;
+  }
+}
+
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+/* Gradient backgrounds for templates */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
+.from-orange-400 {
+  --tw-gradient-from: #fb923c;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-yellow-500 {
+  --tw-gradient-to: #eab308;
+}
+
+.from-gray-700 {
+  --tw-gradient-from: #374151;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-gray-800 {
+  --tw-gradient-to: #1f2937;
+}
+
+.from-green-600 {
+  --tw-gradient-from: #16a34a;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-teal-600 {
+  --tw-gradient-to: #0d9488;
+}
+
+.from-yellow-600 {
+  --tw-gradient-from: #ca8a04;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-orange-700 {
+  --tw-gradient-to: #c2410c;
+}
+
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-container > * {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.kanban-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.kanban-card:hover {
+  transform: translateY(-2px);
+}
+
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+.kanban-board::-webkit-scrollbar {
+  height: 8px;
+}
+
+.kanban-board::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.kanban-board::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.kanban-board::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

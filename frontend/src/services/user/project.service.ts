@@ -1,0 +1,290 @@
+
+const API_BASE_URL =  'https://work-management-chi.vercel.app';
+
+export interface Project {
+  id: number;
+  name: string;
+  key: string;
+  description: string;
+  ownerId: number;
+  status: string;
+  visibility: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectDetails extends Project {
+  memberCount: number;
+  totalSprints: number;
+  completedSprints: number;
+}
+
+export interface ProjectMember {
+  userId: number;
+  projectId: number;
+  role: string;
+  status: string;
+  invitedBy: number;
+  joinedAt: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  avatarUrl?: string;
+}
+
+export interface CreateProjectPayload {
+  name: string;
+  key: string;
+  description: string;
+  status: 'planning' | 'active' | 'on-hold' | 'completed' | 'archived';
+  visibility: 'public' | 'private' | 'team';
+}
+class ProjectService {
+  // Create new project
+  async createProject(projectData: CreateProjectPayload): Promise<Project> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(projectData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create project: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in createProject:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all projects for a user
+   */
+  // Get count projects
+  async getCountProjects(count: number): Promise<number> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${count}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch count total number of projects: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      throw error;
+    }
+  }
+  // Get all projects
+  // auth: public
+  async getAllProjects(projectId: number): Promise<Project[]> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      throw error;
+    }
+  }
+  // auth: public
+  async getUserProjects(userId: string | number): Promise<Project[]> {
+    try {
+      
+      const response = await fetch(
+        `${API_BASE_URL}/projects?userId=${userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get project details by ID
+   */
+  // auth: public
+  async getProjectDetails(projectId: string | number): Promise<ProjectDetails> {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}/details`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch project details: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getProjectDetails:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get project members
+   */
+  async getProjectMembers(projectId: string | number): Promise<ProjectMember[]> {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `${API_BASE_URL}/projects/${projectId}/members`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch project members: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getProjectMembers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user details by ID
+   */
+  async getUserById(userId: string | number): Promise<User> {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `${API_BASE_URL}/users/${userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error in getUserById:', error);
+      throw error;
+    }
+  }
+
+  // Get all users
+  async getAllUsers(): Promise<User[]> {
+  try {
+    const accessToken = localStorage.getItem('accessToken');
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch users: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in getAllUsers:', error);
+    throw error;
+  }
+  }
+
+  // Add a member to project
+  async addProjectMember(projectId: number, userId: number, role: string): Promise<void> {
+  try {
+    const accessToken = localStorage.getItem('accessToken');
+    const response = await fetch(`${API_BASE_URL}/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        userId,
+        role
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to add project member: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in addProjectMember:', error);
+    throw error;
+  }
+}
+
+}
+
+export default new ProjectService();

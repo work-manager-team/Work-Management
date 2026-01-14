@@ -1,0 +1,75 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+/* Dark mode - apply to html.dark */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #111827;
+  color: white;
+}
+
+/* Sidebar + Header luôn sáng */
+html.dark .bg-purple-500 {
+  background-color: #a855f7 !important;
+}
+
+html.dark header.bg-white {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+html.dark header.bg-white * {
+  color: #1f2937 !important;
+}
+
+/* Content area - dark */
+html.dark #app-content {
+  background-color: #111827 !important;
+  color: white !important;
+}
+
+html.dark .bg-white {
+  background-color: #1f2937 !important;
+}
+
+html.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
+html.dark .text-gray-700 {
+  color: #d1d5db !important;
+}
+
+/* Toast Notification Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
