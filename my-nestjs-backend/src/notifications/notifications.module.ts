@@ -6,6 +6,7 @@ import { NotificationsService } from './notifications.service';
 import { NotificationHelperService } from './notification-helper.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
+import { WebSocketTriggerService } from './websocket-trigger.service';
 
 @Module({
   imports: [
@@ -21,8 +22,8 @@ import { NotificationsGateway } from './notifications.gateway';
       inject: [ConfigService],
     }),
   ],
-  providers: [NotificationsService, NotificationHelperService, NotificationsGateway],
+  providers: [NotificationsService, NotificationHelperService, NotificationsGateway, WebSocketTriggerService],
   controllers: [NotificationsController],
-  exports: [NotificationsService, NotificationHelperService, NotificationsGateway],
+  exports: [NotificationsService, NotificationHelperService, NotificationsGateway, WebSocketTriggerService],
 })
 export class NotificationsModule {}

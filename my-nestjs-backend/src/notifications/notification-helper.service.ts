@@ -5,6 +5,7 @@ import { DRIZZLE } from '../db/database.module';
 import { notifications, projectMembers } from '../db/schema';
 import * as schema from '../db/schema';
 import { NotificationsGateway } from './notifications.gateway';
+import { WebSocketTriggerService } from './websocket-trigger.service';
 
 @Injectable()
 export class NotificationHelperService {
@@ -12,6 +13,7 @@ export class NotificationHelperService {
     @Inject(DRIZZLE) private db: NeonHttpDatabase<typeof schema>,
     @Inject(forwardRef(() => NotificationsGateway))
     private notificationsGateway: NotificationsGateway,
+    private websocketTrigger: WebSocketTriggerService,
   ) {}
 
   async notifyUser(
@@ -34,9 +36,9 @@ export class NotificationHelperService {
 
     const notification = result[0];
 
-    // Send real-time notification via WebSocket
+    // Send real-time notification via WebSocket (through Render.com)
     try {
-      this.notificationsGateway.sendNotificationToUser(userId, {
+      await this.websocketTrigger.triggerNotificationToUser(userId, {
         id: notification.id,
         type: notification.type,
         title: notification.title,
@@ -47,7 +49,7 @@ export class NotificationHelperService {
         createdAt: notification.createdAt,
       });
     } catch (error) {
-      console.error('Failed to send WebSocket notification:', error);
+      console.error('Failed to trigger WebSocket notification:', error);
       // Don't throw - notification is still saved in DB
     }
   }
