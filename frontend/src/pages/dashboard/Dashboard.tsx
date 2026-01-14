@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
     
     try {
       const response = await projectService.getUserProjects(currentUserId);
-      const projectsData = Array.isArray(response) ? response : (response.data || []);
+      const projectsData = Array.isArray(response) ? response : ((response as any).data || []);
       setProjects(projectsData);
     } catch (err: any) {
       console.error('Error fetching projects:', err);

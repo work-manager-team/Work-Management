@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, Clock } from 'lucide-react';
-
+import Layout from '../../components/layout/Layout';
+import { apiCall, getAuthHeaders } from '../../utils/api';
 
 interface ProjectDetail {
     id: string | number;
@@ -19,9 +20,9 @@ interface ProjectDetail {
     completedSprints: number;
 }
 
-/*interface ReportsPageProps {
+interface ReportsPageProps {
     onLogout: () => void;
-}*/
+}
 
 const ReportsPage = () => {
     const [reportType, setReportType] = useState('summary');
@@ -52,13 +53,13 @@ const ReportsPage = () => {
             }
 
             // First, get all projects
-            const projectsResponse = await fetch(`http://work-management-chi.vercel.app/projects?userId=${userId}`);
+            const projectsResponse = await apiCall(`http://work-management-chi.vercel.app/projects?userId=${userId}`);
             const projectsData = await projectsResponse.json();
             const projectsList = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
 
             // Then fetch details for each project
             const projectDetailsPromises = projectsList.map((project: any) =>
-                fetch(`http://work-management-chi.vercel.app/projects/${project.id}/details`)
+                apiCall(`http://work-management-chi.vercel.app/projects/${project.id}/details`)
                     .then(res => res.json())
                     .catch(err => {
                         console.error('Error fetching project details:', err);
@@ -193,8 +194,8 @@ const ReportsPage = () => {
                                             </div>
                                             <div className="text-right">
                                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${project.status === 'active'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-gray-100 text-gray-800'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-gray-100 text-gray-800'
                                                     }`}>
                                                     {project.status}
                                                 </span>
@@ -234,7 +235,7 @@ const ReportsPage = () => {
                     )}
                 </div>
             </div>
-        
+
     );
 };
 

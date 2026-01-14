@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, User, Edit2, Save, AlertCircle, Loader } from 'lucide-react';
+import Layout from '../../components/layout/Layout';
 import { useTheme } from '../../context/ThemeContext';
+import { apiCall, getAuthHeaders } from '../../utils/api';
 
 interface UserProfile {
     id: number;
@@ -10,9 +12,9 @@ interface UserProfile {
     avatarUrl: string;
 }
 
-/*interface SettingsPageProps {
+interface SettingsPageProps {
     onLogout: () => void;
-}*/
+}
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState('general');
@@ -32,7 +34,7 @@ const SettingsPage = () => {
         try {
             setLoading(true);
             setError('');
-            const accessToken = localStorage.getItem('accessToken');
+
             const userData = localStorage.getItem('user');
             if (!userData) {
                 setError('User not found. Please login again.');
@@ -42,14 +44,11 @@ const SettingsPage = () => {
             const user = JSON.parse(userData);
             const userId = user.id;
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 
@@ -74,15 +73,12 @@ const SettingsPage = () => {
         try {
             setSaving(true);
             setError('');
-            const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch(
+
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${profile.id}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                         'Authorization': `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         fullName: editedProfile.fullName,
                         email: editedProfile.email,
@@ -114,7 +110,7 @@ const SettingsPage = () => {
     };
 
     return (
-        <div>
+        
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6 text-gray-800">Settings</h1>
 
@@ -338,7 +334,7 @@ const SettingsPage = () => {
                     </div>
                 )}
             </div>
-        </div>
+        
     );
 };
 

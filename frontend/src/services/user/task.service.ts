@@ -1,6 +1,6 @@
 // src/services/user/task.service.ts
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://work-management-chi.vercel.app';
 
 class TaskService {
   /**
@@ -11,13 +11,13 @@ class TaskService {
   async getAssignedTasks(userId: string | number) {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/tasks/assignee/${userId}`,
+        `${API_BASE_URL}/tasks?assigneeId=${userId}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             // Add authorization header if needed
-            // 'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           },
         }
       );

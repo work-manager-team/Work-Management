@@ -23,14 +23,8 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           <span>Workspace</span>
           <ChevronDown size={16} />
         </button>
-        <button className="header-nav-button">
-          <span>Recent</span>
-          <ChevronDown size={16} />
-        </button>
-        <button className="header-nav-button">
-          <span>Starred</span>
-          <ChevronDown size={16} />
-        </button>
+        
+        
         <button className="header-nav-button">
           <span>Templates</span>
           <ChevronDown size={16} />
@@ -46,16 +40,8 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           className="header-search"
         />
 
-        {/* Create Button */}
-        <button className="header-create-button">
-          Create
-        </button>
-
-        {/* Premium Button */}
-        <button className="header-premium-button">
-          <span>⚡</span>
-          <span>Try Premium</span>
-        </button>
+        
+        
 
         {/* User Menu */}
         <div className="header-user-menu">

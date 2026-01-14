@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './RecentWorkItems.css';
+import './recentWorkItems.css';
 
 interface Task {
   id: string;

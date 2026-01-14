@@ -21,6 +21,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } else {
             htmlElement.classList.remove('dark');
         }
+        htmlElement.setAttribute('data-theme', themeValue);
     };
 
     const setTheme = (newTheme: ThemeType) => {
@@ -39,6 +40,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         applyTheme(theme);
     }, [theme]);
 
+    
     return (
         <ThemeContext.Provider value={{ theme, setTheme }}>
             {children}

@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { ThemeProvider } from './context/ThemeContext';
-// Import các page
+
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import VerifyEmail from './pages/auth/VerifyEmail'
 import ForgotPassword from './pages/auth/ForgotPassword';
-
 import Dashboard from './pages/dashboard/Dashboard'
 import ProjectsPage from './pages/projects/ProjectsPage'
 import ProjectDetailsPage from './pages/projects/ProjectDetailsPage';
@@ -57,11 +56,11 @@ function App() {
  return (
   <ThemeProvider>
     <BrowserRouter>
+    
       <Routes>
         {/*Public routes*/}
         <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/dashboard" /> : <RegisterPage onRegister={handleRegister} />} />
-
         {/* ROUTE VERIFY EMAIL */}
         <Route 
           path="/verify-email" 
@@ -99,8 +98,10 @@ function App() {
                }
           />
       </Routes>
+      
     </BrowserRouter>
-  </ThemeProvider>
+    </ThemeProvider>
+  
   ); 
 }
 

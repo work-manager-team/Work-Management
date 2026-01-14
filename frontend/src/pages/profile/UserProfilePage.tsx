@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Edit2, Save, AlertCircle, Loader, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../../components/layout/Layout';
+import { apiCall, getAuthHeaders } from '../../utils/api';
 
 interface UserProfile {
     id: number;
@@ -53,7 +55,7 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
         try {
             setLoading(true);
             setError('');
-            const accessToken = localStorage.getItem('accessToken');
+
             // Get userId from localStorage
             const userData = localStorage.getItem('user');
             if (!userData) {
@@ -64,14 +66,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
             const user = JSON.parse(userData);
             const userId = user.id;
 
-            const response = await fetch(
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 
@@ -96,15 +95,12 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
         try {
             setSaving(true);
             setError('');
-            const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch(
+
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${profile.id}`,
                 {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         fullName: editedProfile.fullName,
                         email: editedProfile.email,
@@ -190,15 +186,12 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
 
             const user = JSON.parse(userData);
             const userId = user.id;
-            const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch(
+
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}/change-password`,
                 {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         oldPassword: oldPassword,
                         newPassword: newPassword
@@ -239,15 +232,12 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
 
             const user = JSON.parse(userData);
             const userId = user.id;
-            const accessToken = localStorage.getItem('accessToken');
-            const response = await fetch(
+
+            const response = await apiCall(
                 `https://work-management-chi.vercel.app/users/${userId}`,
                 {
                     method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
+                    headers: getAuthHeaders(),
                 }
             );
 
