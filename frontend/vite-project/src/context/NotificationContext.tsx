@@ -1,79 +1,108 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { apiCall } from '../utils/api';
+import { websocketService, NotificationData } from '../services/websocket.service';
+import { authService } from '../services/auth.service';
 
-interface Notification {
+interface Toast {
     id: string;
     title: string;
     message: string;
-    time: string;
-    read: boolean;
     type: 'info' | 'warning' | 'success' | 'error';
+    timestamp: number;
 }
 
 interface NotificationContextType {
-    toasts: Notification[];
+    toasts: Toast[];
     removeToast: (id: string) => void;
+    isConnected: boolean;
+    reconnect: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [toasts, setToasts] = useState<Notification[]>([]);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const previousNotificationsRef = useRef<Set<string>>(new Set());
+    const [toasts, setToasts] = useState<Toast[]>([]);
+    const [isConnected, setIsConnected] = useState(false);
+    const toastCounterRef = useRef(0);
+
+    // Mapping notification types to toast types
+    const getToastType = (notificationType: string): 'info' | 'warning' | 'success' | 'error' => {
+        switch (notificationType) {
+            case 'task_assigned':
+            case 'added_to_project':
+            case 'project_created':
+                return 'success';
+            case 'task_status_changed':
+            case 'sprint_status_changed':
+                return 'info';
+            case 'task_deleted':
+            case 'sprint_deleted':
+                return 'error';
+            default:
+                return 'info';
+        }
+    };
 
     useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const user = localStorage.getItem('user');
-                const userId = user ? JSON.parse(user).id : null;
+        const user = authService.getCurrentUser();
+        if (!user) {
+            console.log('❌ No user found, skipping WebSocket connection');
+            return;
+        }
 
-                if (!userId) {
-                    return;
-                }
+        console.log('🚀 Initializing WebSocket connection for user:', user.id);
 
-                const response = await apiCall(`https://work-management-chi.vercel.app/notifications/user/${userId}`);
-                const data = await response.json();
-                const notificationsData: Notification[] = Array.isArray(data) ? data : data.data || [];
+        // Connect to WebSocket
+        websocketService.connect();
 
-                console.log(' Fetched notifications:', notificationsData.length);
+        // Check connection status periodically
+        const statusInterval = setInterval(() => {
+            setIsConnected(websocketService.isConnected());
+        }, 1000);
 
-                const currentIds = new Set(notificationsData.map(n => n.id));
-                const newNotifications = notificationsData.filter(notif => !previousNotificationsRef.current.has(notif.id));
+        // Subscribe to WebSocket notifications
+        const unsubscribeNotification = websocketService.onNotification((notification: NotificationData) => {
+            console.log('🔔 New notification received:', notification);
 
-                console.log(' New notifications:', newNotifications.length);
+            const toastId = `toast-${++toastCounterRef.current}`;
+            const newToast: Toast = {
+                id: toastId,
+                title: notification.title,
+                message: notification.message,
+                type: getToastType(notification.type),
+                timestamp: Date.now(),
+            };
 
-                if (!isInitialLoad && newNotifications.length > 0) {
-                    newNotifications.forEach((notif) => {
-                        console.log(' Showing toast for:', notif.title);
-                        setToasts((prev) => [...prev, notif]);
-                    });
-                }
+            setToasts((prev) => [...prev, newToast]);
 
-                previousNotificationsRef.current = currentIds;
-                setIsInitialLoad(false);
-            } catch (error) {
-                console.error('Error fetching notifications:', error);
-            }
+            // Auto-remove toast after 5 seconds
+            setTimeout(() => {
+                removeToast(toastId);
+            }, 5000);
+        });
+
+        return () => {
+            console.log('🔌 Cleaning up WebSocket connection');
+            unsubscribeNotification();
+            clearInterval(statusInterval);
+            websocketService.disconnect();
         };
-
-        // // Initial fetch
-        // fetchNotifications();
-
-        // // Set up interval
-        // const interval = setInterval(() => {
-        //     fetchNotifications();
-        // }, 60000);
-
-        // return () => clearInterval(interval);
-    }, [isInitialLoad]);
+    }, []);
 
     const removeToast = (id: string) => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
     };
 
+    const reconnect = () => {
+        console.log('🔄 Manual reconnect triggered...');
+        websocketService.resetConnectionAttempts();
+        websocketService.disconnect();
+        setTimeout(() => {
+            websocketService.connect();
+        }, 500);
+    };
+
     return (
-        <NotificationContext.Provider value={{ toasts, removeToast }}>
+        <NotificationContext.Provider value={{ toasts, removeToast, isConnected, reconnect }}>
             {children}
         </NotificationContext.Provider>
     );

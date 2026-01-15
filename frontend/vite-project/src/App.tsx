@@ -10,8 +10,6 @@ import NotificationsPage from './components/NotificationsPage'
 import SettingsPage from './components/SettingsPage'
 import UserProfilePage from './components/UserProfilePage'
 import BoardsPage from './components/BoardsPage'
-import Toast from './components/Toast'
-import { useNotification } from './context/NotificationContext'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -53,45 +51,26 @@ function App() {
 }
 
 function AppContent({ isAuthenticated, onAuthenticated, onLogout }: any) {
-  const { toasts, removeToast } = useNotification();
-
   return (
-    <>
-      {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-50">
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            id={toast.id}
-            title={toast.title}
-            message={toast.message}
-            type={toast.type}
-            onClose={removeToast}
-            duration={5000}
-          />
-        ))}
-      </div>
-
-      <Router>
-        {isAuthenticated ? (
-          <Routes>
-            <Route path="/dashboard" element={<JiraDashboard onLogout={onLogout} />} />
-            <Route path="/boards" element={<BoardsPage onLogout={onLogout} />} />
-            <Route path="/calendar" element={<CalendarPage onLogout={onLogout} />} />
-            <Route path="/reports" element={<ReportsPage onLogout={onLogout} />} />
-            <Route path="/notifications" element={<NotificationsPage onLogout={onLogout} />} />
-            <Route path="/settings" element={<SettingsPage onLogout={onLogout} />} />
-            <Route path="/profile" element={<UserProfilePage onLogout={onLogout} />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        ) : (
-          <Routes>
-            <Route path="/login" element={<LoginPage onLogin={() => onAuthenticated(true)} />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        )}
-      </Router>
-    </>
+    <Router>
+      {isAuthenticated ? (
+        <Routes>
+          <Route path="/dashboard" element={<JiraDashboard onLogout={onLogout} />} />
+          <Route path="/boards" element={<BoardsPage onLogout={onLogout} />} />
+          <Route path="/calendar" element={<CalendarPage onLogout={onLogout} />} />
+          <Route path="/reports" element={<ReportsPage onLogout={onLogout} />} />
+          <Route path="/notifications" element={<NotificationsPage onLogout={onLogout} />} />
+          <Route path="/settings" element={<SettingsPage onLogout={onLogout} />} />
+          <Route path="/profile" element={<UserProfilePage onLogout={onLogout} />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      ) : (
+        <Routes>
+          <Route path="/login" element={<LoginPage onLogin={() => onAuthenticated(true)} />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      )}
+    </Router>
   );
 }
 
