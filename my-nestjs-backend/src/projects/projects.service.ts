@@ -43,6 +43,13 @@ export class ProjectsService {
     return await this.db.select().from(projects);
   }
 
+  async findAllPublic(): Promise<Project[]> {
+    return await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.visibility, 'public'));
+  }
+
   async searchByName(searchTerm: string): Promise<Project[]> {
     return await this.db
       .select()
