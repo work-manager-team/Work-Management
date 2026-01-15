@@ -51,11 +51,8 @@ export class ProjectsController {
 
   @Public()
   @Get()
-  findAll(@Query('userId', ParseIntPipe) userId?: number) {
-    if (userId) {
-      return this.projectsService.findByUser(userId);
-    }
-    return this.projectsService.findAll();
+  findAll() {
+    return this.projectsService.findAllPublic();
   }
 
   @Public()
