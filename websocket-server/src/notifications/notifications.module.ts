@@ -1,16 +1,11 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { DatabaseModule } from '../db/database.module';
-import { NotificationsService } from './notifications.service';
-import { NotificationHelperService } from './notification-helper.service';
-import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
-import { WebSocketTriggerService } from './websocket-trigger.service';
+import { NotificationsController } from './notifications.controller';
 
 @Module({
   imports: [
-    DatabaseModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -22,8 +17,8 @@ import { WebSocketTriggerService } from './websocket-trigger.service';
       inject: [ConfigService],
     }),
   ],
-  providers: [NotificationsService, NotificationHelperService, NotificationsGateway, WebSocketTriggerService],
+  providers: [NotificationsGateway],
   controllers: [NotificationsController],
-  exports: [NotificationsService, NotificationHelperService, NotificationsGateway, WebSocketTriggerService],
+  exports: [NotificationsGateway],
 })
 export class NotificationsModule {}
