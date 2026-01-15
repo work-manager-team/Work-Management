@@ -51,7 +51,14 @@ export class ProjectsController {
 
   @Public()
   @Get()
-  findAll() {
+  findAll(@Query('userId') userId?: string) {
+    if (userId) {
+      const userIdNum = parseInt(userId, 10);
+      if (isNaN(userIdNum)) {
+        throw new Error('userId must be a number');
+      }
+      return this.projectsService.findByUser(userIdNum);
+    }
     return this.projectsService.findAllPublic();
   }
 
