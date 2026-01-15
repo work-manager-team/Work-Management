@@ -180,4 +180,20 @@ export class EmailService {
       },
     });
   }
+
+  /**
+   * Send password reset OTP email
+   */
+  async sendPasswordResetOTPEmail(email: string, name: string, otp: string): Promise<void> {
+    await this.sendEmail({
+      to: email,
+      subject: 'Mã OTP đặt lại mật khẩu',
+      template: 'password-reset-otp',
+      context: {
+        name,
+        otp,
+        appName: this.configService.get<string>('APP_NAME') || 'Work Management',
+      },
+    });
+  }
 }
