@@ -104,7 +104,7 @@ const ForgotPassword: React.FC = () => {
         alert('Đã tạo mật khẩu mới thành công');
         
         // Điều hướng về trang Login
-        navigate('/login');
+        navigate('/forgot-password');
       } else {
         setError(data.message || 'Có lỗi xảy ra, vui lòng thử lại');
       }

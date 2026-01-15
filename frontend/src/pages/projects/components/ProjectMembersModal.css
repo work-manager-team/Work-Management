@@ -697,3 +697,104 @@
     display: none;
   }
 }
+/* Add these styles to your ProjectMembersModal.css file */
+
+/* Avatar wrapper for hover */
+.avatar-wrapper {
+  display: inline-block;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Avatar Tooltip */
+.avatar-tooltip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px 16px;
+  min-width: 250px;
+  animation: tooltipFadeIn 0.15s ease-out;
+  pointer-events: none;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.tooltip-row strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.tooltip-label {
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.tooltip-value {
+  color: #374151;
+  word-break: break-word;
+}
+
+.tooltip-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Role badge colors in tooltip */
+.tooltip-badge.role-admin {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.tooltip-badge.role-member {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.tooltip-badge.role-viewer {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+/* Status badge colors in tooltip */
+.tooltip-badge.status-active {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.tooltip-badge.status-inactive {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.tooltip-badge.status-pending {
+  background-color: #fef3c7;
+  color: #d97706;
+}

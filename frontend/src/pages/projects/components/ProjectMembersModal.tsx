@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { X, User, UserPlus, Trash2, Check, Filter } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Check } from 'lucide-react';
 import projectService, { ProjectMember, User as UserType } from '../../../services/user/project.service';
 import './ProjectMembersModal.css';
 import authService from '../../../services/user/auth.service';
 import AddMemberModal from './AddMemberModal';
-
 
 interface ProjectMembersModalProps {
   projectId: number;
@@ -14,6 +13,7 @@ interface ProjectMembersModalProps {
 
 interface MemberWithDetails extends ProjectMember {
   fullName?: string;
+  email?: string;
   avatarUrl?: string;
   inviterName?: string;
 }
@@ -37,63 +37,49 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
+  
   // State cho role changes
   const [roleDropdownUserId, setRoleDropdownUserId] = useState<number | null>(null);
   const [pendingRoleChanges, setPendingRoleChanges] = useState<Map<number, RoleChange>>(new Map());
   const [savingRoles, setSavingRoles] = useState(false);
-  // State cho filter member
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active'>('all');
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // State cho avatar hover tooltip
+  const [hoveredUserId, setHoveredUserId] = useState<number | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  
   // Ref cho dropdown (để close khi click outside)
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
   // các role có thể chọn
   const AVAILABLE_ROLES = ['admin', 'member', 'viewer'];
+
   useEffect(() => {
     fetchMembers();
   }, [projectId]);
 
   // close dropdown khi click ra ngoài
   useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setRoleDropdownUserId(null);
-    }
-  };
-  
-  if (roleDropdownUserId !== null) {
-    document.addEventListener('mousedown', handleClickOutside);
-  }
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-  };
-  }, [roleDropdownUserId]);
-
-  // close dropdown filter
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setShowFilterDropdown(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setRoleDropdownUserId(null);
       }
     };
-
-    if (showFilterDropdown) {
+    
+    if (roleDropdownUserId !== null) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showFilterDropdown]);
+  }, [roleDropdownUserId]);
 
-  
-
-  const fetchMembers = async (status: 'all' | 'active' = filterStatus) => {
+  const fetchMembers = async () => {
     setLoading(true);
     setError(null);
 
     try {
       const accessToken = localStorage.getItem('accessToken');
+      
       // Get current user
       const currentUser = authService.getCurrentUser();
       
@@ -104,10 +90,8 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       // Lưu current userId
       setCurrentUserId(currentUser.id);
       
-      // Fetch project members
-      let projectMembers: ProjectMember[];
-      if (status === 'active') {
-        const response = await fetch(
+      // Fetch active project members
+      const response = await fetch(
         `https://work-management-chi.vercel.app/projects/${projectId}/members/active`,
         {
           method: 'GET',
@@ -119,33 +103,19 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch active members');
-      }
-      
-      projectMembers = await response.json();
-      }
-      else {
-        const response = await fetch(
-          `https://work-management-chi.vercel.app/projects/${projectId}/members`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-          }
-        );
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Unauthorized. Please login again.');
-          }
-          throw new Error('Failed to fetch members');
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please login again.');
         }
-        
-        projectMembers = await response.json();
-      
+        throw new Error('Failed to fetch members');
       }
+      
+      const projectMembers: ProjectMember[] = await response.json();
+      
+      // Filter chỉ lấy members có role = admin hoặc member
+      const filteredMembers = projectMembers.filter((member) => {
+        const roleLower = member.role.toLowerCase();
+        return roleLower === 'admin' || roleLower === 'member';
+      });
       
       // Find current user's role in the project
       const currentMember = projectMembers.find(m => m.userId === currentUser.id);
@@ -155,17 +125,41 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
 
       // Fetch user details for each member
       const membersWithDetails = await Promise.all(
-        projectMembers.map(async (member) => {
+        filteredMembers.map(async (member) => {
           try {
             // Fetch member's user info
-            const userInfo = await projectService.getUserById(member.userId);
+            const userResponse = await fetch(
+              `https://work-management-chi.vercel.app/users/${member.userId}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+              }
+            );
+
+            if (!userResponse.ok) {
+              throw new Error('Failed to fetch user info');
+            }
+
+            const userInfo = await userResponse.json();
             
             // Fetch inviter's user info if exists
             let inviterName = 'N/A';
             if (member.invitedBy) {
               try {
-                const inviterInfo = await projectService.getUserById(member.invitedBy);
-                inviterName = inviterInfo.fullName;
+                const inviterResponse = await fetch(
+                  `https://work-management-chi.vercel.app/users/${member.invitedBy}`,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${accessToken}`,
+                    },
+                  }
+                );
+                
+                if (inviterResponse.ok) {
+                  const inviterInfo = await inviterResponse.json();
+                  inviterName = inviterInfo.fullName;
+                }
               } catch (err) {
                 console.error('Error fetching inviter info:', err);
               }
@@ -174,6 +168,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
             return {
               ...member,
               fullName: userInfo.fullName,
+              email: userInfo.email,
               avatarUrl: userInfo.avatarUrl,
               inviterName,
             };
@@ -182,6 +177,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
             return {
               ...member,
               fullName: 'Unknown User',
+              email: 'N/A',
               avatarUrl: undefined,
               inviterName: 'N/A',
             };
@@ -199,7 +195,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
   };
 
   const activeCount = useMemo(() => {
-  return members.filter(m => m.status.toLowerCase() === 'active').length;
+    return members.length; // Tất cả đều active rồi
   }, [members]);
 
   const getRoleBadgeClass = (role: string) => {
@@ -227,10 +223,12 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     });
   };
 
-  // Check if current user can add members (admin or owner role)
+  // Check if current user can add members
   const canAddMembers = currentUserRole === 'admin' || currentUserRole === 'member';
+  
   // Check if current user can delete members (only admin)
   const canDeleteMembers = currentUserRole === 'admin';
+  
   const handleAddMemberSuccess = () => {
     // Refresh members list after adding new members
     fetchMembers();
@@ -244,14 +242,13 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     // Can't delete yourself
     if (member.userId === currentUserId) return false;
 
-    // Can only delete members with status active or invited
-    const status = member.status.toLowerCase();
-    return status === 'active' || status === 'invited';
+    // All members here are active
+    return true;
   };
 
   // Handle delete button click - show confirmation
   const handleDeleteClick = (userId: number) => {
-  setConfirmDeleteUserId(userId);
+    setConfirmDeleteUserId(userId);
   };
 
   // Handle delete confirmation
@@ -277,8 +274,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
 
       // Success - refresh members list
       await fetchMembers();
-
-      
+      setConfirmDeleteUserId(null);
     } catch (err: any) {
       console.error('Error deleting member:', err);
       setError(err.message || 'Failed to delete member. Please try again.');
@@ -292,144 +288,144 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
     setConfirmDeleteUserId(null);
   };
 
-  // Get existing member IDs (only admin, member active)
-  const existingMemberIds = members
-    .filter(m => {
-      const status = m.status.toLowerCase();
-      return status === 'active' || status === 'invited';
-    })
-    .map(m => m.userId);
+  // Get existing member IDs
+  const existingMemberIds = members.map(m => m.userId);
   
-  
-  //check quyền admin khi thay đổi role của member
+  // Check quyền admin khi thay đổi role của member
   const canChangeRoles = currentUserRole === 'admin';
 
   const canChangeRole = (member: MemberWithDetails): boolean => {
     if (!canChangeRoles) return false;
     if (member.userId === currentUserId) return false; // Can't change own role
-    const status = member.status.toLowerCase();
-    return status === 'active'; // Only active members
+    return true; // All members are active
   };
   
-  //handle change role
+  // Handle change role
   const handleRoleClick = (userId: number) => {
-  if (roleDropdownUserId === userId) {
-    setRoleDropdownUserId(null); // Close if already open
-  } else {
-    setRoleDropdownUserId(userId); // Open dropdown
-  }
+    if (roleDropdownUserId === userId) {
+      setRoleDropdownUserId(null); // Close if already open
+    } else {
+      setRoleDropdownUserId(userId); // Open dropdown
+    }
   };
 
   const handleRoleSelect = (userId: number, newRole: string) => {
-  const member = members.find(m => m.userId === userId);
-  if (!member) return;
+    const member = members.find(m => m.userId === userId);
+    if (!member) return;
 
-  const oldRole = member.role;
-  
-  // Update UI immediately (optimistic update)
-  setMembers(prevMembers =>
-    prevMembers.map(m =>
-      m.userId === userId ? { ...m, role: newRole } : m
-    )
-  );
+    const oldRole = member.role;
+    
+    // Update UI immediately (optimistic update)
+    setMembers(prevMembers =>
+      prevMembers.map(m =>
+        m.userId === userId ? { ...m, role: newRole } : m
+      )
+    );
 
-  // Add to pending changes
-  setPendingRoleChanges(prev => {
-    const newChanges = new Map(prev);
-    newChanges.set(userId, { userId, newRole, oldRole });
-    return newChanges;
-  });
+    // Add to pending changes
+    setPendingRoleChanges(prev => {
+      const newChanges = new Map(prev);
+      newChanges.set(userId, { userId, newRole, oldRole });
+      return newChanges;
+    });
 
-  // Close dropdown
-  setRoleDropdownUserId(null);
+    // Close dropdown
+    setRoleDropdownUserId(null);
   };
 
-  // handle save role change
+  // Handle save role change
   const handleSaveRoleChanges = async () => {
-  if (pendingRoleChanges.size === 0) return;
+    if (pendingRoleChanges.size === 0) return;
 
-  setSavingRoles(true);
-  setError(null);
+    setSavingRoles(true);
+    setError(null);
 
-  try {
-    // Process each role change
-    for (const [userId, change] of pendingRoleChanges) {
-      try {
-        const accessToken = localStorage.getItem('accessToken');
-        const response = await fetch(
-          `https://work-management-chi.vercel.app/projects/${projectId}/members/${userId}/role`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ role: change.newRole }),
+    try {
+      // Process each role change
+      for (const [userId, change] of pendingRoleChanges) {
+        try {
+          const accessToken = localStorage.getItem('accessToken');
+          const response = await fetch(
+            `https://work-management-chi.vercel.app/projects/${projectId}/members/${userId}/role`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({ role: change.newRole }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to update role for user ${userId}`);
           }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to update role for user ${userId}`);
+        } catch (err) {
+          console.error(`Error updating role for user ${userId}:`, err);
         }
-      } catch (err) {
-        console.error(`Error updating role for user ${userId}:`, err);
-        // Continue with other updates even if one fails
       }
+
+      // Clear pending changes
+      setPendingRoleChanges(new Map());
+
+      // Refresh members to get accurate data
+      await fetchMembers();
+    } catch (err: any) {
+      console.error('Error saving role changes:', err);
+      setError(err.message || 'Failed to save role changes. Please try again.');
+    } finally {
+      setSavingRoles(false);
     }
+  };
+
+  // Handle hủy change role
+  const handleCancelRoleChanges = () => {
+    // Revert UI changes
+    setMembers(prevMembers =>
+      prevMembers.map(m => {
+        const pendingChange = pendingRoleChanges.get(m.userId);
+        if (pendingChange) {
+          return { ...m, role: pendingChange.oldRole };
+        }
+        return m;
+      })
+    );
 
     // Clear pending changes
     setPendingRoleChanges(new Map());
-
-    // Refresh members to get accurate data
-    await fetchMembers();
-  } catch (err: any) {
-    console.error('Error saving role changes:', err);
-    setError(err.message || 'Failed to save role changes. Please try again.');
-  } finally {
-    setSavingRoles(false);
-  }
   };
 
-  // handle hủy change role
-  const handleCancelRoleChanges = () => {
-  // Revert UI changes
-  setMembers(prevMembers =>
-    prevMembers.map(m => {
-      const pendingChange = pendingRoleChanges.get(m.userId);
-      if (pendingChange) {
-        return { ...m, role: pendingChange.oldRole };
-      }
-      return m;
-    })
-  );
-
-  // Clear pending changes
-  setPendingRoleChanges(new Map());
-  };
-
-  // Get current role for member (with pending changes)
+  // Get current role for member
   const getCurrentRole = (member: MemberWithDetails): string => {
-    return member.role; // Already updated in state
+    return member.role;
   };
 
-  // handle filter member
-  const handleFilterChange = async (status: 'all' | 'active') => {
-    setFilterStatus(status);
-    setShowFilterDropdown(false);
-    await fetchMembers(status);
+  // Handle avatar hover
+  const handleAvatarMouseEnter = (event: React.MouseEvent, member: MemberWithDetails) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      top: rect.bottom + 8,
+      left: rect.left,
+    });
+    setHoveredUserId(member.userId);
   };
+
+  const handleAvatarMouseLeave = () => {
+    setHoveredUserId(null);
+  };
+
   return (
     <>
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content members-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modal-header">
-          <div>
-            <h2>Project Members</h2>
-            <p className="project-name">{projectName}</p>
-          </div>
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content members-modal" onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="modal-header">
+            <div>
+              <h2>Project Members</h2>
+              <p className="project-name">{projectName}</p>
+            </div>
 
-          <div className="header-actions">
+            <div className="header-actions">
               {/* Show buttons khi có pending changes */}
               {pendingRoleChanges.size > 0 && (
                 <>
@@ -450,38 +446,6 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
                 </>
               )}
 
-              {/*button filter member*/}
-              {!loading && (
-              <div className="filter-container" ref={filterDropdownRef}>
-                <button
-                  className="filter-button"
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  title="Filter Members"
-                >
-                  <Filter size={20} />
-                  <span className="filter-label">{filterStatus === 'all' ? 'All' : 'Active'}</span>
-                </button>
-                
-                {showFilterDropdown && (
-                  <div className="filter-dropdown">
-                    <div
-                      className={`filter-option ${filterStatus === 'all' ? 'selected' : ''}`}
-                      onClick={() => handleFilterChange('all')}
-                    >
-                      <span>All</span>
-                      {filterStatus === 'all' && <Check size={16} className="check-icon" />}
-                    </div>
-                    <div
-                      className={`filter-option ${filterStatus === 'active' ? 'selected' : ''}`}
-                      onClick={() => handleFilterChange('active')}
-                    >
-                      <span>Active</span>
-                      {filterStatus === 'active' && <Check size={16} className="check-icon" />}
-                    </div>
-                  </div>
-                )}
-              </div>
-              )}
               {canAddMembers && !loading && (
                 <button
                   className="add-member-button"
@@ -491,188 +455,230 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
                   <UserPlus size={20} />
                 </button>
               )}
-          <button className="close-button" onClick={onClose}>
-            <X size={24} />
-          </button>
-        </div>
-      </div>
-
-        {/* Body */}
-        <div className="modal-body">
-          {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading members...</p>
-            </div>
-          ) : error ? (
-            <div className="error-container">
-              <p className="error-message">{error}</p>
-              <button onClick={() => fetchMembers()} className="retry-button">
-                Try Again
+              
+              <button className="close-button" onClick={onClose}>
+                <X size={24} />
               </button>
             </div>
-          ) : members.length === 0 ? (
-            <div className="empty-state">
-              <User size={64} className="empty-icon" />
-              <h3>No members found</h3>
-              <p>This project doesn't have any members yet</p>
-            </div>
-          ) : (
-            <div className="members-table-container">
-              <table className="members-table">
-                <thead>
-                  <tr>
-                    
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Invited By</th>
-                    <th>Joined At</th>
-                    {canDeleteMembers && <th></th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((member) => {
-                    const currentRole = getCurrentRole(member);
-                    const hasRoleChange = pendingRoleChanges.has(member.userId);
+          </div>
 
-                    return (
-                      <tr key={member.userId} className={hasRoleChange ? 'role-changed' : ''}>
-                        <td className='member-info'>
-                          <div className="member-avatar-name">
-                            {member.avatarUrl ? (
-                              <img
-                                src={member.avatarUrl}
-                                alt={member.fullName}
-                                className="member-avatar"
-                              />
-                            ) : (
-                              <div className="member-avatar-placeholder">
-                                <User size={20} />
-                              </div>
-                            )}
-                            <span className="member-name">{member.fullName}</span>
-                          </div>
-                        </td>
-                        <td className="role-cell">
-                          {canChangeRole(member) ? (
-                            <div className="role-selector" ref={roleDropdownUserId === member.userId ? dropdownRef : null}>
-                              {/* Clickable badge */}
-                              <button
-                                className={`role-badge ${getRoleBadgeClass(currentRole)} clickable ${hasRoleChange ? 'changed' : ''}`}
-                                onClick={() => handleRoleClick(member.userId)}
-                                disabled={savingRoles}
+          {/* Body */}
+          <div className="modal-body">
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading members...</p>
+              </div>
+            ) : error ? (
+              <div className="error-container">
+                <p className="error-message">{error}</p>
+                <button onClick={() => fetchMembers()} className="retry-button">
+                  Try Again
+                </button>
+              </div>
+            ) : members.length === 0 ? (
+              <div className="empty-state">
+                <User size={64} className="empty-icon" />
+                <h3>No members found</h3>
+                <p>This project doesn't have any active members yet</p>
+              </div>
+            ) : (
+              <div className="members-table-container">
+                <table className="members-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Invited By</th>
+                      <th>Joined At</th>
+                      {canDeleteMembers && <th></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((member) => {
+                      const currentRole = getCurrentRole(member);
+                      const hasRoleChange = pendingRoleChanges.has(member.userId);
+
+                      return (
+                        <tr key={member.userId} className={hasRoleChange ? 'role-changed' : ''}>
+                          <td className='member-info'>
+                            <div className="member-avatar-name">
+                              <div
+                                className="avatar-wrapper"
+                                onMouseEnter={(e) => handleAvatarMouseEnter(e, member)}
+                                onMouseLeave={handleAvatarMouseLeave}
                               >
-                                {currentRole}
-                              </button>
-                              
-                              {/* Dropdown menu */}
-                              {roleDropdownUserId === member.userId && (
-                                <div className="role-dropdown">
-                                  {AVAILABLE_ROLES.map((role) => (
-                                    <div
-                                      key={role}
-                                      className={`role-option ${currentRole.toLowerCase() === role ? 'selected' : ''}`}
-                                      onClick={() => handleRoleSelect(member.userId, role)}
-                                    >
-                                      <span>{role}</span>
-                                      {currentRole.toLowerCase() === role && (
-                                        <Check size={16} className="check-icon" />
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                                {member.avatarUrl ? (
+                                  <img
+                                    src={member.avatarUrl}
+                                    alt={member.fullName}
+                                    className="member-avatar"
+                                  />
+                                ) : (
+                                  <div className="member-avatar-placeholder">
+                                    <User size={20} />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="member-name">{member.fullName}</span>
                             </div>
-                          ) : (
-                            /* Non-clickable badge */
-                            <span className={`role-badge ${getRoleBadgeClass(currentRole)}`}>
-                              {currentRole}
+                          </td>
+                          
+                          <td className="role-cell">
+                            {canChangeRole(member) ? (
+                              <div className="role-selector" ref={roleDropdownUserId === member.userId ? dropdownRef : null}>
+                                {/* Clickable badge */}
+                                <button
+                                  className={`role-badge ${getRoleBadgeClass(currentRole)} clickable ${hasRoleChange ? 'changed' : ''}`}
+                                  onClick={() => handleRoleClick(member.userId)}
+                                  disabled={savingRoles}
+                                >
+                                  {currentRole}
+                                </button>
+                                
+                                {/* Dropdown menu */}
+                                {roleDropdownUserId === member.userId && (
+                                  <div className="role-dropdown">
+                                    {AVAILABLE_ROLES.map((role) => (
+                                      <div
+                                        key={role}
+                                        className={`role-option ${currentRole.toLowerCase() === role ? 'selected' : ''}`}
+                                        onClick={() => handleRoleSelect(member.userId, role)}
+                                      >
+                                        <span>{role}</span>
+                                        {currentRole.toLowerCase() === role && (
+                                          <Check size={16} className="check-icon" />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              /* Non-clickable badge */
+                              <span className={`role-badge ${getRoleBadgeClass(currentRole)}`}>
+                                {currentRole}
+                              </span>
+                            )}
+                          </td>
+                          
+                          <td>
+                            <span className={`status-badge ${getStatusBadgeClass(member.status)}`}>
+                              {member.status}
                             </span>
-                          )}
-                        </td>
-                        
-                        <td>
-                          <span className={`status-badge ${getStatusBadgeClass(member.status)}`}>
-                            {member.status}
-                          </span>
-                        </td>
-                        <td className="inviter-name">{member.inviterName}</td>
-                        <td className="joined-date">{formatDate(member.joinedAt)}</td>
-                        {canDeleteMembers && (
-                          <td className="member-actions">
-                          {canDeleteMember(member) ? (
-                            <div className="action-cell">
-                              {/* Nếu đang confirm userId này */}
-                              {confirmDeleteUserId === member.userId ? (
-                                // Hiện 2 buttons: Xác nhận | Hủy
-                                <div className="inline-confirm">
-                                  <button
-                                    className="confirm-yes-button"
-                                    onClick={() => handleConfirmDelete(member.userId)}
-                                    disabled={deletingUserId === member.userId}
-                                  >
-                                    {deletingUserId === member.userId ? '...' : 'Xác nhận'}
-                                  </button>
-                                  <button
-                                    className="confirm-no-button"
-                                    onClick={handleCancelDelete}
-                                    disabled={deletingUserId === member.userId}
-                                  >
-                                    Hủy
-                                  </button>
+                          </td>
+                          
+                          <td className="inviter-name">{member.inviterName}</td>
+                          <td className="joined-date">{formatDate(member.joinedAt)}</td>
+                          
+                          {canDeleteMembers && (
+                            <td className="member-actions">
+                              {canDeleteMember(member) ? (
+                                <div className="action-cell">
+                                  {confirmDeleteUserId === member.userId ? (
+                                    <div className="inline-confirm">
+                                      <button
+                                        className="confirm-yes-button"
+                                        onClick={() => handleConfirmDelete(member.userId)}
+                                        disabled={deletingUserId === member.userId}
+                                      >
+                                        {deletingUserId === member.userId ? '...' : 'Xác nhận'}
+                                      </button>
+                                      <button
+                                        className="confirm-no-button"
+                                        onClick={handleCancelDelete}
+                                        disabled={deletingUserId === member.userId}
+                                      >
+                                        Hủy
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      className="delete-member-button"
+                                      onClick={() => handleDeleteClick(member.userId)}
+                                      disabled={deletingUserId !== null}
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  )}
                                 </div>
                               ) : (
-                                // Hiện button Trash
-                                <button
-                                  className="delete-member-button"
-                                  onClick={() => handleDeleteClick(member.userId)}
-                                  disabled={deletingUserId !== null}
-                                >
-                                  <Trash2 size={18} />
-                                </button>
+                                <span className="no-action"></span>
                               )}
-                            </div>
-                          ) : (
-                            <span className="no-action"></span>
+                            </td>
                           )}
-                        </td>
-                      
-                        )}
-                      
-                      
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
-                      </tr>
-                    );
-                    
-                  })}
-                </tbody>
-              </table>
+          {/* Footer */}
+          {!loading && !error && members.length > 0 && (
+            <div className="modal-footer">
+              <p className="members-count">
+                Total: {activeCount} member{activeCount !== 1 ? 's' : ''}
+              </p>
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        {!loading && !error && members.length > 0 && (
-          <div className="modal-footer">
-            <p className="members-count">
-              Total: {activeCount} member{activeCount !== 1 ? 's' : ''}
-            </p>
-          </div>
-        )}
       </div>
-    </div>
-    
 
-    {/* Add Member Modal */}
-    {showAddMemberModal && (
-      <AddMemberModal
-        projectId={projectId}
-        existingMemberIds={existingMemberIds}
-        onClose={() => setShowAddMemberModal(false)}
-        onSuccess={handleAddMemberSuccess}
-      />
-    )}
+      {/* Avatar Hover Tooltip */}
+      {hoveredUserId !== null && (
+        <div
+          className="avatar-tooltip"
+          style={{
+            position: 'fixed',
+            top: `${tooltipPosition.top}px`,
+            left: `${tooltipPosition.left}px`,
+            zIndex: 10000,
+          }}
+        >
+          {(() => {
+            const member = members.find(m => m.userId === hoveredUserId);
+            if (!member) return null;
+
+            return (
+              <div className="tooltip-content">
+                <div className="tooltip-row">
+                  <strong>{member.fullName}</strong>
+                </div>
+                <div className="tooltip-row">
+                  <span className="tooltip-label">Contact:</span>
+                  <span className="tooltip-value">{member.email}</span>
+                </div>
+                <div className="tooltip-row">
+                  <span className="tooltip-label">Role:</span>
+                  <span className={`tooltip-badge ${getRoleBadgeClass(member.role)}`}>
+                    {member.role}
+                  </span>
+                </div>
+                <div className="tooltip-row">
+                  <span className="tooltip-label">Status:</span>
+                  <span className={`tooltip-badge ${getStatusBadgeClass(member.status)}`}>
+                    {member.status}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Add Member Modal */}
+      {showAddMemberModal && (
+        <AddMemberModal
+          projectId={projectId}
+          existingMemberIds={existingMemberIds}
+          onClose={() => setShowAddMemberModal(false)}
+          onSuccess={handleAddMemberSuccess}
+        />
+      )}
     </>
   );
 };

@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X, User } from 'lucide-react';
+import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X, User, Star } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { apiCall, getAuthHeaders } from '../../utils/api';
+import recentActivityService from '../../services/user/recentActivity.service';
+import starredService from '../../services/user/starred.service';
 
 interface Sprint {
     id: string;
@@ -68,9 +69,14 @@ const BoardsPage = () => {
     const [taskForm, setTaskForm] = useState({
         title: '',
         description: '',
-        priority: 'medium' as 'high' | 'medium' | 'low',
-        assigneeId: ''
+        priority: 'medium' as 'high' | 'medium' | 'low'
     });
+    
+    // 🆕 Assign by email states
+    const [assigneeEmail, setAssigneeEmail] = useState('');
+    const [showAssigneeEmailModal, setShowAssigneeEmailModal] = useState(false);
+    const [assigningTask, setAssigningTask] = useState(false);
+    
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -81,6 +87,14 @@ const BoardsPage = () => {
     const [assigneeInfo, setAssigneeInfo] = useState<{ id: string; name: string; email?: string } | null>(null);
     const [assigneeLoading, setAssigneeLoading] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+    
+    // 🆕 Delete confirmation states
+    const [taskIdToDelete, setTaskIdToDelete] = useState<string | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    
+    // ⭐ Starred state
+    const [starredTasks, setStarredTasks] = useState<Set<string>>(new Set());
+    
     const [columns, setColumns] = useState<BoardColumn[]>([
         { id: 'todo', title: 'TO DO', tasks: [] },
         { id: 'in_progress', title: 'IN PROGRESS', tasks: [] },
@@ -91,6 +105,7 @@ const BoardsPage = () => {
     // Fetch projects on component mount
     useEffect(() => {
         fetchProjects();
+        loadStarredTasks();
     }, []);
 
     // Fetch sprints when project is selected
@@ -109,6 +124,41 @@ const BoardsPage = () => {
             setSelectedSprint(sprints[0].id);
         }
     }, [selectedSprint, sprints]);
+
+    // ⭐ Load starred tasks
+    const loadStarredTasks = () => {
+        const starred = starredService.getStarredTasks();
+        const starredIds = new Set(starred.map(t => t.id));
+        setStarredTasks(starredIds);
+    };
+
+    // ⭐ Handle star toggle
+    const handleToggleStar = (e: React.MouseEvent, task: Task) => {
+        e.stopPropagation();
+        
+        const project = projects.find(p => p.id === selectedProject);
+        
+        const isStarred = starredService.toggleTaskStar({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            priority: task.priority,
+            projectId: task.projectId,
+            projectName: project?.name
+        });
+        
+        // Update local state
+        setStarredTasks(prev => {
+            const newSet = new Set(prev);
+            if (isStarred) {
+                newSet.add(task.id);
+            } else {
+                newSet.delete(task.id);
+            }
+            return newSet;
+        });
+    };
 
     const fetchProjects = async () => {
         try {
@@ -287,6 +337,22 @@ const BoardsPage = () => {
         setDraggedTask(null);
     };
 
+    // ⭐ Helper to track task activity
+    const trackTaskActivity = (task: Task) => {
+        const project = projects.find(p => p.id === selectedProject);
+        
+        if (project) {
+            recentActivityService.trackTaskView({
+                id: task.id,
+                title: task.title,
+                description: task.description,
+                status: task.status,
+                projectId: project.id,
+                projectName: project.name
+            });
+        }
+    };
+
     const createTask = async () => {
         if (!selectedProject || !selectedSprint || !taskForm.title || !taskForm.description) {
             alert('Please fill in all required fields');
@@ -307,9 +373,7 @@ const BoardsPage = () => {
                     description: taskForm.description,
                     type: 'task',
                     priority: taskForm.priority,
-                    status: selectedColumnId || 'todo',
-                    // reporterId: reporterId,
-                    assigneeId: taskForm.assigneeId || null
+                    status: selectedColumnId || 'todo'
                 })
             });
 
@@ -317,13 +381,25 @@ const BoardsPage = () => {
                 const newTask = await response.json();
                 console.log('Task created:', newTask);
 
+                // ⭐ Track new task creation
+                trackTaskActivity(newTask);
+
+                // 🆕 Update state directly without full reload
+                const status = selectedColumnId || 'todo';
+                setColumns(columns.map(col => {
+                    if (col.id === status) {
+                        return {
+                            ...col,
+                            tasks: [...col.tasks, newTask]
+                        };
+                    }
+                    return col;
+                }));
+
                 // Reset form and close modal
-                setTaskForm({ title: '', description: '', priority: 'medium', assigneeId: '' });
+                setTaskForm({ title: '', description: '', priority: 'medium' });
                 setSelectedColumnId('');
                 setShowAddTaskModal(false);
-
-                // Refresh tasks
-                fetchTasks(selectedSprint);
             } else {
                 alert('Failed to create task');
             }
@@ -386,6 +462,9 @@ const BoardsPage = () => {
             });
 
             if (response.ok) {
+                // ⭐ Track comment creation
+                trackTaskActivity(selectedTask);
+                
                 setNewComment('');
                 fetchComments(selectedTask.id);
             }
@@ -395,7 +474,7 @@ const BoardsPage = () => {
     };
 
     const updateComment = async (commentId: string) => {
-        if (!editingCommentContent.trim()) return;
+        if (!editingCommentContent.trim() || !selectedTask) return;
 
         try {
             const response = await apiCall(`https://work-management-chi.vercel.app/comments/${commentId}`, {
@@ -407,11 +486,12 @@ const BoardsPage = () => {
             });
 
             if (response.ok) {
+                // ⭐ Track comment edit
+                trackTaskActivity(selectedTask);
+                
                 setEditingCommentId(null);
                 setEditingCommentContent('');
-                if (selectedTask) {
-                    fetchComments(selectedTask.id);
-                }
+                fetchComments(selectedTask.id);
             } else {
                 // Show error notification
                 setNotificationMessage('Failed to update comment. You can only edit your own comments.');
@@ -448,13 +528,19 @@ const BoardsPage = () => {
     };
 
     const openCommentModal = (task: Task) => {
+        // ⭐ Track when opening comment modal
+        trackTaskActivity(task);
+        
         setSelectedTask(task);
         setShowCommentModal(true);
         fetchComments(task.id);
     };
 
-    const openAssigneeModal = async (assigneeId: string) => {
+    const openAssigneeModal = async (task: Task, assigneeId: string) => {
         try {
+            // ⭐ Track assignee view
+            trackTaskActivity(task);
+            
             setAssigneeLoading(true);
             const response = await apiCall(`https://work-management-chi.vercel.app/users/${assigneeId}`);
 
@@ -475,19 +561,78 @@ const BoardsPage = () => {
         }
     };
 
-    const deleteTask = async (taskId: string) => {
-        if (!window.confirm('Are you sure you want to delete this task?')) return;
+    // 🆕 Assign task by email
+    const assignTaskByEmail = async (taskId: string) => {
+        if (!assigneeEmail.trim()) {
+            setNotificationMessage('Please enter an email address');
+            setTimeout(() => setNotificationMessage(null), 3000);
+            return;
+        }
 
         try {
-            const response = await apiCall(`https://work-management-chi.vercel.app/tasks/${taskId}`, {
+            setAssigningTask(true);
+            const response = await apiCall(
+                `https://work-management-chi.vercel.app/tasks/${taskId}/assign-by-email`,
+                {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email: assigneeEmail })
+                }
+            );
+
+            if (response.ok) {
+                const updatedTask = await response.json();
+
+                // 🆕 Update state directly - find and update the task
+                setColumns(columns.map(col => ({
+                    ...col,
+                    tasks: col.tasks.map(task =>
+                        task.id === taskId ? { ...task, assigneeId: updatedTask.assigneeId } : task
+                    )
+                })));
+
+                setNotificationMessage('Task assigned successfully!');
+                setAssigneeEmail('');
+                setShowAssigneeEmailModal(false);
+                setTimeout(() => setNotificationMessage(null), 3000);
+            } else {
+                const errorData = await response.json();
+                setNotificationMessage(errorData.message || 'Failed to assign task');
+                setTimeout(() => setNotificationMessage(null), 3000);
+            }
+        } catch (error) {
+            console.error('Error assigning task:', error);
+            setNotificationMessage('Error assigning task. Please try again.');
+            setTimeout(() => setNotificationMessage(null), 3000);
+        } finally {
+            setAssigningTask(false);
+        }
+    };
+
+    // 🆕 Delete task with confirmation
+    const deleteTask = async (taskId: string) => {
+        setTaskIdToDelete(taskId);
+        setShowDeleteConfirm(true);
+    };
+
+    // 🆕 Confirm delete task
+    const confirmDeleteTask = async () => {
+        if (!taskIdToDelete) return;
+
+        try {
+            const response = await apiCall(`https://work-management-chi.vercel.app/tasks/${taskIdToDelete}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
 
             if (response.ok) {
-                if (selectedSprint) {
-                    fetchTasks(selectedSprint);
-                }
+                // 🆕 Update state directly - remove task from all columns
+                setColumns(columns.map(col => ({
+                    ...col,
+                    tasks: col.tasks.filter(task => task.id !== taskIdToDelete)
+                })));
+                setShowDeleteConfirm(false);
+                setTaskIdToDelete(null);
             }
         } catch (error) {
             console.error('Error deleting task:', error);
@@ -495,7 +640,7 @@ const BoardsPage = () => {
     };
 
     return (
-    
+        
             <div className="h-full flex flex-col">
                 {/* Header */}
                 <div className="mb-6">
@@ -589,6 +734,7 @@ const BoardsPage = () => {
                         <div className="text-gray-500">Loading tasks...</div>
                     </div>
                 )}
+                
                 {/* Kanban Board */}
                 {!loading && (
                     <div className="flex-1 overflow-x-auto bg-gray-100 rounded-lg p-4">
@@ -625,15 +771,32 @@ const BoardsPage = () => {
                                                     <h4 className="text-sm font-medium text-gray-800 flex-1">
                                                         {task.title}
                                                     </h4>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            deleteTask(task.id);
-                                                        }}
-                                                        className="text-gray-400 hover:text-red-600 transition"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        {/* ⭐ Star Button */}
+                                                        <button
+                                                            onClick={(e) => handleToggleStar(e, task)}
+                                                            className={`transition-all ${
+                                                                starredTasks.has(task.id)
+                                                                    ? 'text-yellow-500 hover:text-yellow-600'
+                                                                    : 'text-gray-400 hover:text-yellow-500'
+                                                            }`}
+                                                            aria-label={starredTasks.has(task.id) ? 'Unstar task' : 'Star task'}
+                                                        >
+                                                            <Star 
+                                                                size={14} 
+                                                                fill={starredTasks.has(task.id) ? 'currentColor' : 'none'}
+                                                            />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                deleteTask(task.id);
+                                                            }}
+                                                            className="text-gray-400 hover:text-red-600 transition"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <p className="text-xs text-gray-600 mb-2">
                                                     {task.description}
@@ -645,7 +808,7 @@ const BoardsPage = () => {
                                                     <div className="flex items-center gap-2">
                                                         {task.assigneeId && (
                                                             <button
-                                                                onClick={() => openAssigneeModal(task.assigneeId!)}
+                                                                onClick={() => openAssigneeModal(task, task.assigneeId!)}
                                                                 className="text-gray-400 hover:text-blue-600 transition"
                                                                 title="View assignee"
                                                             >
@@ -665,6 +828,17 @@ const BoardsPage = () => {
                                                 >
                                                     <MessageCircle size={14} />
                                                     <span>Comment</span>
+                                                </button>
+                                                {/* 🆕 Assign Task Button */}
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedTask(task);
+                                                        setShowAssigneeEmailModal(true);
+                                                    }}
+                                                    className="mt-2 w-full flex items-center justify-center gap-2 py-1 text-xs text-gray-600 hover:text-blue-600 border border-gray-200 rounded hover:border-blue-300 transition"
+                                                >
+                                                    <Plus size={14} />
+                                                    <span>Assign Task</span>
                                                 </button>
                                             </div>
                                         ))}
@@ -707,7 +881,7 @@ const BoardsPage = () => {
                                         type="text"
                                         value={taskForm.title}
                                         onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                                        placeholder="e.g., Implement user authentication"
+                                        placeholder="Task title"
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
@@ -740,20 +914,6 @@ const BoardsPage = () => {
                                         <option value="medium">Medium</option>
                                         <option value="high">High</option>
                                     </select>
-                                </div>
-
-                                {/* Assignee ID */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Assignee ID (optional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={taskForm.assigneeId}
-                                        onChange={(e) => setTaskForm({ ...taskForm, assigneeId: e.target.value })}
-                                        placeholder="Enter assignee ID"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
                                 </div>
                             </div>
 
@@ -926,6 +1086,95 @@ const BoardsPage = () => {
                     </div>
                 )}
 
+                {/* 🆕 Assign Task by Email Modal */}
+                {showAssigneeEmailModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-800">Assign Task by Email</h2>
+                                <button
+                                    onClick={() => {
+                                        setShowAssigneeEmailModal(false);
+                                        setAssigneeEmail('');
+                                    }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        User Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={assigneeEmail}
+                                        onChange={(e) => setAssigneeEmail(e.target.value)}
+                                        placeholder="Enter user email address"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setShowAssigneeEmailModal(false);
+                                        setAssigneeEmail('');
+                                    }}
+                                    disabled={assigningTask}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (selectedTask) {
+                                            assignTaskByEmail(selectedTask.id);
+                                        }
+                                    }}
+                                    disabled={assigningTask || !assigneeEmail.trim()}
+                                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {assigningTask ? 'Assigning...' : 'Assign Task'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 🆕 Delete Confirmation Modal */}
+                {showDeleteConfirm && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                            <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Task?</h2>
+                            <p className="text-gray-600 mb-6">
+                                Are you sure you want to delete this task? This action cannot be undone.
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteConfirm(false);
+                                        setTaskIdToDelete(null);
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDeleteTask}
+                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Notification Toast */}
                 {notificationMessage && (
                     <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm animate-pulse">
@@ -933,7 +1182,7 @@ const BoardsPage = () => {
                     </div>
                 )}
             </div>
-        
+
     );
 };
 

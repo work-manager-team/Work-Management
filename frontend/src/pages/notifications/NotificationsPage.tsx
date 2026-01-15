@@ -4,12 +4,17 @@ import Layout from '../../components/layout/Layout';
 import { apiCall, getAuthHeaders } from '../../utils/api';
 
 interface Notification {
-    id: string;
+    id: string | number;
+    userId?: number;
+    taskId?: string | number | null;
+    projectId?: string | number;
+    type: 'task_assigned' | 'added_to_project' | 'project_created' | 'info' | 'warning' | 'success' | 'error';
     title: string;
     message: string;
-    time: string;
-    read: boolean;
-    type: 'info' | 'warning' | 'success' | 'error';
+    isRead: boolean;
+    readAt?: string | null;
+    createdAt: string;
+    time?: string;
 }
 
 interface NotificationsPageProps {
@@ -18,18 +23,28 @@ interface NotificationsPageProps {
 
 const NotificationsPage = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [notificationToDelete, setNotificationToDelete] = useState<string | number | null>(null);
+    const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
     // Fetch notifications on component mount
     useEffect(() => {
         fetchNotifications();
         fetchUnreadCount();
+
+        // // Set up interval to auto-fetch notifications every 5 seconds
+        // const notificationInterval = setInterval(() => {
+        //     fetchNotifications();
+        //     fetchUnreadCount();
+        // }, 500000);
+
+        // // Cleanup interval on component unmount
+        // return () => clearInterval(notificationInterval);
     }, []);
 
     const fetchNotifications = async () => {
         try {
-            setLoading(true);
             const user = localStorage.getItem('user');
             const userId = user ? JSON.parse(user).id : null;
 
@@ -44,9 +59,6 @@ const NotificationsPage = () => {
             setNotifications(notificationsData);
         } catch (error) {
             console.error('Error fetching notifications:', error);
-            setNotifications([]);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -67,7 +79,7 @@ const NotificationsPage = () => {
         }
     };
 
-    const markAsRead = async (id: string) => {
+    const markAsRead = async (id: string | number) => {
         try {
             const response = await apiCall(`https://work-management-chi.vercel.app/notifications/${id}/read`, {
                 method: 'PATCH',
@@ -75,13 +87,9 @@ const NotificationsPage = () => {
             });
 
             if (response.ok) {
-                setNotifications(
-                    notifications.map((notif) =>
-                        notif.id === id ? { ...notif, read: true } : notif
-                    )
-                );
-                // Update unread count
-                fetchUnreadCount();
+                // Refetch notifications to ensure state is synced with backend
+                await fetchNotifications();
+                await fetchUnreadCount();
             } else {
                 console.error('Error marking notification as read:', response.statusText);
             }
@@ -105,10 +113,9 @@ const NotificationsPage = () => {
             });
 
             if (response.ok) {
-                setNotifications(
-                    notifications.map((notif) => ({ ...notif, read: true }))
-                );
-                setUnreadCount(0);
+                // Refetch notifications to ensure state is synced with backend
+                await fetchNotifications();
+                await fetchUnreadCount();
             } else {
                 console.error('Error marking all as read:', response.statusText);
             }
@@ -117,9 +124,16 @@ const NotificationsPage = () => {
         }
     };
 
-    const deleteNotification = async (id: string) => {
+    const deleteNotification = async (id: string | number) => {
+        setNotificationToDelete(id);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteNotification = async () => {
+        if (!notificationToDelete) return;
+
         try {
-            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/${id}`, {
+            const response = await apiCall(`https://work-management-chi.vercel.app/notifications/${notificationToDelete}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
@@ -130,20 +144,22 @@ const NotificationsPage = () => {
             }
 
             // Remove from UI after successful deletion
-            setNotifications(notifications.filter((notif) => notif.id !== id));
+            setNotifications(notifications.filter((notif) => notif.id !== notificationToDelete));
             // Update unread count
             fetchUnreadCount();
             console.log('Notification deleted successfully');
+            setShowDeleteConfirm(false);
+            setNotificationToDelete(null);
         } catch (error) {
             console.error('Error deleting notification:', error);
         }
     };
 
     const deleteAllNotifications = async () => {
-        if (!window.confirm('Are you sure you want to delete all notifications?')) {
-            return;
-        }
+        setShowDeleteAllConfirm(true);
+    };
 
+    const confirmDeleteAllNotifications = async () => {
         try {
             const user = localStorage.getItem('user');
             const userId = user ? JSON.parse(user).id : null;
@@ -166,12 +182,13 @@ const NotificationsPage = () => {
             setNotifications([]);
             setUnreadCount(0);
             console.log('All notifications deleted successfully');
+            setShowDeleteAllConfirm(false);
         } catch (error) {
             console.error('Error deleting all notifications:', error);
         }
     };
 
-    const getDisplayedUnreadCount = notifications.filter((n) => !n.read).length;
+    const getDisplayedUnreadCount = notifications.filter((n) => !n.isRead).length;
 
     const getTypeBgColor = (type: string) => {
         switch (type) {
@@ -200,7 +217,7 @@ const NotificationsPage = () => {
     };
 
     return (
-        
+        <div>
             <div className="max-w-4xl mx-auto">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-bold text-gray-800">Notifications</h1>
@@ -229,70 +246,118 @@ const NotificationsPage = () => {
                     </div>
                 </div>
 
-                {/* Loading State */}
-                {loading && (
-                    <div className="flex items-center justify-center h-96">
-                        <div className="text-gray-500">Loading notifications...</div>
-                    </div>
-                )}
-
                 {/* Notifications List */}
-                {!loading && (
-                    <div className="space-y-3">
-                        {notifications.length === 0 ? (
-                            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                                <Bell size={48} className="mx-auto text-gray-400 mb-3" />
-                                <p className="text-gray-600 text-lg">No notifications</p>
-                            </div>
-                        ) : (
-                            notifications.map((notification) => (
-                                <div
-                                    key={notification.id}
-                                    className={`border rounded-lg p-4 transition ${notification.read
-                                        ? 'bg-white border-gray-200'
-                                        : `${getTypeBgColor(notification.type)}`
-                                        }`}
-                                >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3 flex-1">
-                                            <Bell
-                                                size={20}
-                                                className={`mt-1 flex-shrink-0 ${getTypeIconColor(notification.type)}`}
-                                            />
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-gray-800">{notification.title}</h3>
-                                                <p className="text-gray-700 text-sm mt-1">{notification.message}</p>
-                                                <div className="flex items-center text-gray-500 text-xs mt-2 space-x-1">
-                                                    <Clock size={14} />
-                                                    <span>{notification.time}</span>
-                                                </div>
+                <div className="space-y-3">
+                    {notifications.length === 0 ? (
+                        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                            <Bell size={48} className="mx-auto text-gray-400 mb-3" />
+                            <p className="text-gray-600 text-lg">No notifications</p>
+                        </div>
+                    ) : (
+                        notifications.map((notification) => (
+                            <div
+                                key={notification.id}
+                                className={`border rounded-lg p-4 transition ${notification.isRead
+                                    ? 'bg-white border-gray-200'
+                                    : `${getTypeBgColor(notification.type)}`
+                                    }`}
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-start space-x-3 flex-1">
+                                        <Bell
+                                            size={20}
+                                            className={`mt-1 flex-shrink-0 ${getTypeIconColor(notification.type)}`}
+                                        />
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-gray-800">{notification.title}</h3>
+                                            <p className="text-gray-700 text-sm mt-1">{notification.message}</p>
+                                            <div className="flex items-center text-gray-500 text-xs mt-2 space-x-1">
+                                                <Clock size={14} />
+                                                <span>{new Date(notification.createdAt).toLocaleString()}</span>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="flex items-center space-x-2 ml-4">
-                                            {!notification.read && (
-                                                <button
-                                                    onClick={() => markAsRead(notification.id)}
-                                                    className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded transition"
-                                                >
-                                                    Mark Read
-                                                </button>
-                                            )}
+                                    <div className="flex items-center space-x-2 ml-4">
+                                        {!notification.isRead && (
                                             <button
-                                                onClick={() => deleteNotification(notification.id)}
-                                                className="text-gray-500 hover:text-red-600 transition"
+                                                onClick={() => markAsRead(notification.id)}
+                                                className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded transition"
                                             >
-                                                <Trash2 size={18} />
+                                                Mark Read
                                             </button>
-                                        </div>
+                                        )}
+                                        <button
+                                            onClick={() => deleteNotification(notification.id)}
+                                            className="text-gray-500 hover:text-red-600 transition"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                )}
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
 
+            {/* Delete Notification Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Notification?</h2>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete this notification? This action cannot be undone.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteConfirm(false);
+                                    setNotificationToDelete(null);
+                                }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteNotification}
+                                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete All Notifications Confirmation Modal */}
+            {showDeleteAllConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">Delete All Notifications?</h2>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete all notifications? This action cannot be undone.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteAllConfirm(false)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteAllNotifications}
+                                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+                            >
+                                Delete All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

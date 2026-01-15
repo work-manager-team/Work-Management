@@ -1,16 +1,22 @@
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Project } from '../../../models/Project';
 
 interface ProjectCardProps {
   project: Project;
   onClick: () => void;
+  onViewDetail?: () => void;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, onViewDetail }) => {
   const handleQuickLinksClick = (e: React.MouseEvent, link: string) => {
     e.stopPropagation();
     console.log('Navigate to:', link);
+  };
+
+  const handleViewDetail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewDetail?.();
   };
 
   return (
@@ -39,7 +45,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
         </div>
       )}
 
-      
+      {/* View Detail Link */}
+      <div className="project-card-footer">
+        <button 
+          className="view-detail-link"
+          onClick={handleViewDetail}
+          title="View project details"
+        >
+          View detail
+          <ChevronRight size={16} />
+        </button>
+      </div>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Edit2, Save, AlertCircle, Loader, Check, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../../components/layout/Layout';
 import { apiCall, getAuthHeaders } from '../../utils/api';
 
 interface UserProfile {
@@ -37,6 +36,8 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [showNotification, setShowNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string>('');
 
     useEffect(() => {
         if (showNotification) {
@@ -50,6 +51,27 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
     useEffect(() => {
         fetchUserProfile();
     }, []);
+
+    const fetchAvatarUrl = async (userId: number) => {
+        try {
+            const response = await apiCall(
+                `https://work-management-chi.vercel.app/users/${userId}/avatar`,
+                {
+                    method: 'GET',
+                    headers: getAuthHeaders(),
+                }
+            );
+            if (response.ok) {
+                const data = await response.json();
+                // Extract URL from avatar object
+                if (data.avatar?.url) {
+                    setAvatarUrl(data.avatar.url);
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching avatar:', err);
+        }
+    };
 
     const fetchUserProfile = async () => {
         try {
@@ -81,6 +103,8 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
             const data = await response.json();
             setProfile(data);
             setEditedProfile(data);
+            // Fetch avatar image
+            fetchAvatarUrl(data.id);
         } catch (err) {
             setError('Failed to load profile. Please try again.');
             console.error('Error fetching profile:', err);
@@ -220,6 +244,73 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
         }
     };
 
+    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            const errorMsg = 'Please select a valid image file';
+            setShowNotification({ type: 'error', message: errorMsg });
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            const errorMsg = 'Image file size must be less than 5MB';
+            setShowNotification({ type: 'error', message: errorMsg });
+            return;
+        }
+
+        try {
+            setAvatarUploading(true);
+
+            const userData = localStorage.getItem('user');
+            if (!userData) {
+                setShowNotification({ type: 'error', message: 'User not found. Please login again.' });
+                return;
+            }
+
+            const user = JSON.parse(userData);
+            const userId = user.id;
+
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(
+                `https://work-management-chi.vercel.app/users/avatar`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    },
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to upload avatar');
+            }
+
+            setShowNotification({ type: 'success', message: 'Avatar uploaded successfully!' });
+            // Refresh avatar
+            fetchAvatarUrl(userId);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to upload avatar. Please try again.';
+            setShowNotification({ type: 'error', message: errorMessage });
+            console.error('Error uploading avatar:', err);
+        } finally {
+            setAvatarUploading(false);
+            // Reset file input
+            if (event.target) {
+                event.target.value = '';
+            }
+        }
+    };
+
     const handleDeleteAccount = async () => {
         try {
             setDeleteLoading(true);
@@ -329,12 +420,32 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
                         <div className="px-6 pb-6">
                             {/* Avatar and Basic Info */}
                             <div className="flex items-end space-x-6 mb-6">
-                                <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold border-4 border-white -mt-12 shadow-lg overflow-hidden">
-                                    {editedProfile?.avatarUrl ? (
-                                        <img src={editedProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                    ) : (
-                                        editedProfile?.fullName?.charAt(0).toUpperCase() || 'U'
-                                    )}
+                                <div className="relative">
+                                    <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold border-4 border-white -mt-12 shadow-lg overflow-hidden">
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                        ) : editedProfile?.fullName ? (
+                                            editedProfile.fullName.charAt(0).toUpperCase()
+                                        ) : (
+                                            'U'
+                                        )}
+                                    </div>
+                                    <label className="absolute bottom-0 right-0 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-full cursor-pointer transition shadow-md">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarUpload}
+                                            disabled={avatarUploading}
+                                            className="hidden"
+                                        />
+                                        {avatarUploading ? (
+                                            <Loader size={16} className="animate-spin" />
+                                        ) : (
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4.5-4.5 3 3 4-4 2.5 2.5V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10z" />
+                                            </svg>
+                                        )}
+                                    </label>
                                 </div>
 
                                 <div className="flex-1">
@@ -487,21 +598,6 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ onLogout }) => {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Avatar URL Section */}
-                            {isEditing && (
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Avatar URL</label>
-                                    <input
-                                        type="url"
-                                        value={editedProfile?.avatarUrl || ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, avatarUrl: e.target.value })}
-                                        disabled={saving}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
-                                        placeholder="https://example.com/avatar.jpg"
-                                    />
-                                </div>
-                            )}
 
                             {/* Account Actions */}
                             <div className="border-t pt-6">

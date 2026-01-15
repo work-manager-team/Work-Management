@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { ThemeProvider } from './context/ThemeContext';
-
+import TaskCard from './pages/taskcard/TaskCard';
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import VerifyEmail from './pages/auth/VerifyEmail'
@@ -11,6 +11,10 @@ import Dashboard from './pages/dashboard/Dashboard'
 import ProjectsPage from './pages/projects/ProjectsPage'
 import ProjectDetailsPage from './pages/projects/ProjectDetailsPage';
 import CalendarPage from './pages/calendar/CalendarPage';
+// import toast
+import { NotificationProvider, useNotification } from './context/NotificationContext';
+import Toast from './pages/Toast';
+
 //import Table from './pages/table/Table';
 import BoardsPage from './pages/boards/BoardsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
@@ -53,8 +57,31 @@ function App() {
   if (loading) {
     return <div>Loading...</div>;
   }
+  function ToastContainer() {
+  const { toasts, removeToast } = useNotification();
+
+  return (
+    <div className="fixed top-4 right-4 z-50">
+      {toasts.map((toast: any) => (
+        <Toast
+          key={toast.id}
+          id={toast.id}
+          title={toast.title}
+          message={toast.message}
+          type={toast.type}
+          onClose={removeToast}
+          duration={5000}
+        />
+      ))}
+    </div>
+  );
+}
+
+
+  
  return (
   <ThemeProvider>
+    <NotificationProvider>
     <BrowserRouter>
     
       <Routes>
@@ -90,6 +117,7 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/profile" element={<UserProfilePage onLogout={handleLogout} />} />
+        
                       {/* 404 - Redirect to dashboard */}
                       //<Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
@@ -100,6 +128,7 @@ function App() {
       </Routes>
       
     </BrowserRouter>
+    </NotificationProvider>
     </ThemeProvider>
   
   ); 

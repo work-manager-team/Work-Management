@@ -89,12 +89,7 @@ const AssignedTasksModal: React.FC<AssignedTasksModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        {!loading && tasks.length > 0 && (
-          <div className="modal-footer">
-            <p className="tasks-count">Total: {tasks.length} task{tasks.length !== 1 ? 's' : ''}</p>
-          </div>
-        )}
+        
       </div>
     </div>
   );

@@ -30,13 +30,13 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
   }, []);
 
   useEffect(() => {
-    // Filter users based on search query
+    // Filter users based on search query (by email)
     if (searchQuery.trim() === '') {
       setFilteredUsers(allUsers);
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = allUsers.filter(user =>
-        user.fullName.toLowerCase().includes(query)
+        user.email.toLowerCase().includes(query)
       );
       setFilteredUsers(filtered);
     }
@@ -122,7 +122,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
           <Search size={20} className="search-icon" />
           <input
             type="text"
-            placeholder="Search users by name"
+            placeholder="Search users by email"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
@@ -178,7 +178,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
                     )}
                     <div className="user-details">
                       <span className="user-name">{user.fullName}</span>
-                      
+                      <span className="user-email">{user.email}</span>
                     </div>
                   </div>
                   <div className="selection-indicator">

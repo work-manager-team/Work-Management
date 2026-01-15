@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import recentActivityService from '../../../services/user/recentActivity.service';
 
 interface CreateProjectModalProps {
   onClose: () => void;
@@ -90,6 +91,13 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose, onProj
 
       const newProject = await response.json();
       const projectId = newProject.id; // Lấy ID của project vừa tạo
+
+      // Track project creation
+      recentActivityService.trackProjectView({
+        id: projectId?.toString() || '',
+        name: formData.name,
+        description: formData.description,
+      }, 'create');
 
       // Thêm user hiện tại làm admin
       const user = localStorage.getItem('user');

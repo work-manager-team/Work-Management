@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter } from 'lucide-react';
+import { Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter, Star } from 'lucide-react';
 import projectService, { Project, ProjectDetails } from '../../services/user/project.service';
+import recentActivityService from '../../services/user/recentActivity.service';
+import starredService from '../../services/user/starred.service';
 import ProjectMembersModal from './components/ProjectMembersModal';
 import CreateProjectModal from './components/CreateProjectModal';
 
@@ -31,6 +33,9 @@ const ProjectsPage = () => {
     name: string;
   } | null>(null);
   
+  // ⭐ Starred state
+  const [starredProjects, setStarredProjects] = useState<Set<string>>(new Set());
+  
   
   
   // Get current user ID
@@ -39,6 +44,7 @@ const ProjectsPage = () => {
   
   useEffect(() => {
     fetchProjects();
+    loadStarredProjects();
     
     // Scroll event listener
     const handleScroll = () => {
@@ -143,13 +149,21 @@ const ProjectsPage = () => {
       const projectsWithDetails = await Promise.all(
         allProjects.map(async (project) => {
           try {
-            const details = await projectService.getProjectDetails(project.id);
+            // Fetch project members
+            const members = await projectService.getProjectMembers(project.id);
+            
+            // Count only active members with role 'member' or 'admin'
+            const activeMemberCount = members.filter((member: any) => 
+              member.status?.toLowerCase() === 'active' && 
+              (member.role?.toLowerCase() === 'member' || member.role?.toLowerCase() === 'admin')
+            ).length;
+            
             return {
               ...project,
-              memberCount: details.memberCount,
+              memberCount: activeMemberCount,
             };
           } catch (err) {
-            console.error(`Error fetching details for project ${project.id}:`, err);
+            console.error(`Error fetching members for project ${project.id}:`, err);
             return {
               ...project,
               memberCount: 0,
@@ -168,11 +182,27 @@ const ProjectsPage = () => {
   };
   
   const handleProjectClick = (projectId: number) => {
+    // Track project detail view
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      recentActivityService.trackProjectView({
+        id: projectId.toString(),
+        name: project.name,
+        description: project.description,
+      }, 'view-detail');
+    }
     navigate(`/projects/${projectId}`);
   };
 
   const handleShowMembers = (e: React.MouseEvent, projectId: number, projectName: string) => {
     e.stopPropagation(); // Prevent project card click
+    
+    // Track project members view
+    recentActivityService.trackProjectView({
+      id: projectId.toString(),
+      name: projectName,
+    }, 'view-members');
+    
     setSelectedProjectForMembers({ id: projectId, name: projectName });
   };
 
@@ -195,6 +225,38 @@ const ProjectsPage = () => {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // ⭐ Load starred projects
+  const loadStarredProjects = () => {
+    const starred = starredService.getStarredProjects();
+    const starredIds = new Set(starred.map(p => p.id));
+    setStarredProjects(starredIds);
+  };
+
+  // ⭐ Handle star toggle
+  const handleToggleStar = (e: React.MouseEvent, project: ProjectWithDetails) => {
+    e.stopPropagation(); // Prevent project card click
+    
+    const isStarred = starredService.toggleProjectStar({
+      id: project.id.toString(),
+      name: project.name,
+      description: project.description,
+      key: project.key,
+      status: project.status,
+      visibility: project.visibility
+    });
+    
+    // Update local state
+    setStarredProjects(prev => {
+      const newSet = new Set(prev);
+      if (isStarred) {
+        newSet.add(project.id.toString());
+      } else {
+        newSet.delete(project.id.toString());
+      }
+      return newSet;
+    });
   };
   
   const handleFilterChange = (type: 'all' | 'my') => {
@@ -330,7 +392,7 @@ const ProjectsPage = () => {
                       {/* Project Header */}
                       <div className="p-6 border-b border-gray-200">
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-1">
                             <span className="bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded">
                               {project.key}
                             </span>
@@ -338,7 +400,24 @@ const ProjectsPage = () => {
                               {project.name}
                             </h3>
                           </div>
-                          <div className={`w-3 h-3 rounded-full ${getStatusColor(project.status)}`}></div>
+                          <div className="flex items-center gap-2">
+                            {/* ⭐ Star Button */}
+                            <button
+                              onClick={(e) => handleToggleStar(e, project)}
+                              className={`p-1.5 rounded-full transition-all ${
+                                starredProjects.has(project.id.toString())
+                                  ? 'text-yellow-500 hover:text-yellow-600'
+                                  : 'text-gray-400 hover:text-yellow-500'
+                              }`}
+                              aria-label={starredProjects.has(project.id.toString()) ? 'Unstar project' : 'Star project'}
+                            >
+                              <Star 
+                                size={18} 
+                                fill={starredProjects.has(project.id.toString()) ? 'currentColor' : 'none'}
+                              />
+                            </button>
+                            <div className={`w-3 h-3 rounded-full ${getStatusColor(project.status)}`}></div>
+                          </div>
                         </div>
                         <p className="text-gray-600 text-sm line-clamp-2">
                           {project.description || 'No description available'}
