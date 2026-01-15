@@ -114,7 +114,7 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
       // Filter chỉ lấy members có role = admin hoặc member
       const filteredMembers = projectMembers.filter((member) => {
         const roleLower = member.role.toLowerCase();
-        return roleLower === 'admin' || roleLower === 'member';
+        return roleLower === 'admin' || roleLower === 'member' || roleLower === 'viewer';
       });
       
       // Find current user's role in the project

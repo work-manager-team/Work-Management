@@ -135,7 +135,7 @@ const ProjectsPage = () => {
             
             const activeMemberCount = members.filter((member: any) => 
               member.status?.toLowerCase() === 'active' && 
-              (member.role?.toLowerCase() === 'member' || member.role?.toLowerCase() === 'admin')
+              (member.role?.toLowerCase() === 'member' || member.role?.toLowerCase() === 'admin' || member.role?.toLowerCase() === 'viewer')
             ).length;
             
             return {
