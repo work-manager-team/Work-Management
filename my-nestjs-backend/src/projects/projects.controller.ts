@@ -44,6 +44,11 @@ export class ProjectsController {
     return { count };
   }
 
+  @Get('my-invitations')
+  getMyInvitations(@CurrentUser('userId') userId: number) {
+    return this.projectsService.getMyInvitations(userId);
+  }
+
   @Public()
   @Get()
   findAll(@Query('userId', ParseIntPipe) userId?: number) {

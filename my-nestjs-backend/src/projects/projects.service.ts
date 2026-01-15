@@ -232,4 +232,41 @@ export class ProjectsService {
 
     return activities;
   }
+
+  // Get all project invitations for a user
+  async getMyInvitations(userId: number) {
+    const invitations = await this.db
+      .select({
+        id: projectMembers.id,
+        role: projectMembers.role,
+        invitedAt: projectMembers.invitedAt,
+        project: {
+          id: projects.id,
+          name: projects.name,
+          key: projects.key,
+          description: projects.description,
+          status: projects.status,
+          visibility: projects.visibility,
+        },
+        invitedBy: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          email: users.email,
+          avatarUrl: users.avatarUrl,
+        },
+      })
+      .from(projectMembers)
+      .innerJoin(projects, eq(projectMembers.projectId, projects.id))
+      .leftJoin(users, eq(projectMembers.invitedBy, users.id))
+      .where(
+        and(
+          eq(projectMembers.userId, userId),
+          eq(projectMembers.status, 'invited')
+        )
+      )
+      .orderBy(desc(projectMembers.invitedAt));
+
+    return invitations;
+  }
 }
