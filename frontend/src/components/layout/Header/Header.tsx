@@ -7,7 +7,7 @@ import CreateTaskModal from './CreateTaskModal';
 import Toast from '../../../pages/Toast';
 import { useNotification } from '../../../context/NotificationContext';
 import { websocketService } from '../../../services/user/websocket.service';
-
+import { useWebSocket } from '../../../hooks/useWebSocket';
 interface HeaderProps {
   onLogout: () => void;
 }
@@ -23,7 +23,8 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   const [isReconnecting, setIsReconnecting] = useState(false);
 
   const { toasts, removeToast } = useNotification();
-
+  // Initialize WebSocket connection for all pages
+  useWebSocket();
   // ✅ MỚI: Refs để detect click outside
   const userMenuRef = useRef<HTMLDivElement>(null);
   const createMenuRef = useRef<HTMLDivElement>(null);
