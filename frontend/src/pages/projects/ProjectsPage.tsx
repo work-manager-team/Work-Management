@@ -1,14 +1,37 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader, Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter, Star } from 'lucide-react';
+import { Loader, Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter, Star, Mail, X, Check, XCircle, Clock, AlertCircle } from 'lucide-react';
 import projectService, { Project, ProjectDetails } from '../../services/user/project.service';
 import recentActivityService from '../../services/user/recentActivity.service';
 import starredService from '../../services/user/starred.service';
+import { apiCall } from '../../utils/api';
 import ProjectMembersModal from './components/ProjectMembersModal';
 import CreateProjectModal from './components/CreateProjectModal';
+import './components/InvitationsModal.css';
 
 interface ProjectWithDetails extends Project {
   memberCount?: number;
+}
+
+interface Invitation {
+  id: number;
+  role: string;
+  invitedAt: string;
+  project: {
+    id: number;
+    name: string;
+    key: string;
+    description: string;
+    status: string;
+    visibility: string;
+  };
+  invitedBy: {
+    id: number;
+    username: string;
+    fullName: string;
+    email: string;
+    avatarUrl: string;
+  };
 }
 
 const ProjectsPage = () => {
@@ -21,12 +44,23 @@ const ProjectsPage = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'my'>('all');
+  const [filterInitialized, setFilterInitialized] = useState(false);
   const [projectCount, setProjectCount] = useState<{ all: number; my: number }>({ 
     all: 0, 
     my: 0 
   });
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // ✅ Invitations state
+  const [showInvitationsModal, setShowInvitationsModal] = useState(false);
+  const [invitationsCount, setInvitationsCount] = useState(0);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(false);
+  const [invitationsError, setInvitationsError] = useState<string | null>(null);
+  const [invitationsProcessing, setInvitationsProcessing] = useState(false);
+  const [selectedInvitationId, setSelectedInvitationId] = useState<number | null>(null);
+  const [selectedAction, setSelectedAction] = useState<'accept' | 'reject' | null>(null);
   
   const [selectedProjectForMembers, setSelectedProjectForMembers] = useState<{
     id: number;
@@ -38,51 +72,153 @@ const ProjectsPage = () => {
   const user = localStorage.getItem('user');
   const currentUserId = user ? JSON.parse(user).id : null;
   
-  useEffect(() => {
-    fetchProjects();
-    loadStarredProjects();
-    
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 3);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [filterType]);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
-        setShowFilterMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-  
-  const getCountProjects = async (): Promise<number> => {
+  // ✅ Fetch invitations count
+  const fetchInvitationsCount = useCallback(async () => {
     try {
-      const response = await fetch('https://work-management-chi.vercel.app/projects/count', {
+      const response = await apiCall('https://work-management-chi.vercel.app/projects/my-invitations', {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
 
+      if (response.ok) {
+        const data = await response.json();
+        // Handle both array and single object
+        const count = Array.isArray(data) ? data.length : (data ? 1 : 0);
+        setInvitationsCount(count);
+      }
+    } catch (err) {
+      console.error('Error fetching invitations count:', err);
+    }
+  }, []);
+  
+  // ✅ Fetch full invitations list
+  const fetchInvitations = useCallback(async () => {
+    setInvitationsLoading(true);
+    setInvitationsError(null);
+
+    try {
+      const response = await apiCall('https://work-management-chi.vercel.app/projects/my-invitations', {
+        method: 'GET',
+      });
+
+      console.log('Fetch invitations response:', response);
+
+      if (response.status === 401 || response.status === 403) {
+        setInvitationsError('Your session has expired. Please refresh the page.');
+        setInvitationsLoading(false);
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch project count: ${response.statusText}`);
+        throw new Error('Failed to fetch invitations');
       }
 
       const data = await response.json();
-      return data.count;
-    } catch (error) {
-      console.error('Error in getCountProjects:', error);
-      throw error;
+      console.log('Invitations data:', data);
+
+      // Ensure data is always an array
+      if (Array.isArray(data)) {
+        setInvitations(data);
+      } else if (data && typeof data === 'object') {
+        // If it's a single object, wrap it in an array
+        setInvitations([data]);
+      } else {
+        setInvitations([]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching invitations:', err);
+      setInvitationsError(err.message || 'Failed to load invitations');
+      setInvitations([]);
+    } finally {
+      setInvitationsLoading(false);
+    }
+  }, []);
+  
+  // ✅ Format date helper
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    }
+  };
+  
+  // ✅ Handle invitation click
+  const handleInvitationClick = (invitationId: number) => {
+    if (selectedInvitationId === invitationId) {
+      setSelectedInvitationId(null);
+      setSelectedAction(null);
+    } else {
+      setSelectedInvitationId(invitationId);
+      setSelectedAction(null);
     }
   };
 
-  const fetchProjects = async () => {
+  // ✅ Handle action change
+  const handleActionChange = (action: 'accept' | 'reject') => {
+    setSelectedAction(action);
+  };
+
+  // ✅ Handle confirm invitation
+  const handleConfirmInvitation = async () => {
+    if (!selectedInvitationId || !selectedAction) {
+      setInvitationsError('Please select an action (Accept or Reject)');
+      return;
+    }
+
+    setInvitationsProcessing(true);
+    setInvitationsError(null);
+
+    try {
+      const endpoint = selectedAction === 'accept' 
+        ? `https://work-management-chi.vercel.app/project-invitations/${selectedInvitationId}/accept`
+        : `https://work-management-chi.vercel.app/project-invitations/${selectedInvitationId}/reject`;
+
+      const response = await apiCall(endpoint, {
+        method: 'POST',
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setInvitationsError('Your session has expired. Please refresh the page.');
+        setInvitationsProcessing(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${selectedAction} invitation`);
+      }
+
+      setInvitations(prev => prev.filter(inv => inv.id !== selectedInvitationId));
+      setSelectedInvitationId(null);
+      setSelectedAction(null);
+
+      fetchProjects();
+      fetchInvitationsCount();
+
+      if (invitations.length === 1) {
+        setTimeout(() => setShowInvitationsModal(false), 500);
+      }
+    } catch (err: any) {
+      console.error(`Error ${selectedAction}ing invitation:`, err);
+      setInvitationsError(err.message || `Failed to ${selectedAction} invitation. Please try again.`);
+    } finally {
+      setInvitationsProcessing(false);
+    }
+  };
+  
+  const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -90,42 +226,29 @@ const ProjectsPage = () => {
       let allProjects: Project[] = [];
 
       if (filterType === 'my') {
-        allProjects = await projectService.getUserProjects(currentUserId);
+        // Fetch user's projects using API with userId
+        const response = await apiCall(`https://work-management-chi.vercel.app/projects?userId=${currentUserId}`, {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user projects: ${response.statusText}`);
+        }
+
+        allProjects = await response.json();
         setProjectCount(prev => ({ ...prev, my: allProjects.length }));
       } else {
-        const count = await getCountProjects();
-        const maxAttempts = count * 2;
-        const projectPromises = [];
-
-        for (let i = 1; i <= maxAttempts; i++) {
-          projectPromises.push(
-            projectService.getAllProjects(i).catch(err => {
-              console.error(`Error fetching project ${i}:`, err);
-              return null;
-            })
-          );
-        }
-
-        const projectResults = await Promise.all(projectPromises);
-        const allFetchedProjects = projectResults
-          .filter(p => p !== null)
-          .flat() as Project[];
-          
-        const userProjects = await projectService.getUserProjects(currentUserId);
-        const userProjectIds = new Set(userProjects.map(p => p.id));
-
-        allProjects = allFetchedProjects.filter(project => {
-          const isPublic = project.visibility.toLowerCase() === 'public';
-          const isTeam = project.visibility.toLowerCase() === 'team';
-          const isMember = userProjectIds.has(project.id);
-          return isPublic || isMember || isTeam;
+        // ✅ Fetch all projects using API endpoint
+        const response = await apiCall('https://work-management-chi.vercel.app/projects', {
+          method: 'GET',
         });
-        
-        setProjectCount(prev => ({ ...prev, all: allProjects.length }));
-        
-        if (allProjects.length < count) {
-          console.warn(`Expected ${count} projects but only found ${allProjects.length}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch projects: ${response.statusText}`);
         }
+
+        allProjects = await response.json();
+        setProjectCount(prev => ({ ...prev, all: allProjects.length }));
       }
 
       const projectsWithDetails = await Promise.all(
@@ -158,6 +281,63 @@ const ProjectsPage = () => {
       setError(err.message || 'Failed to load projects');
     } finally {
       setLoading(false);
+    }
+  }, [filterType, currentUserId]);
+  
+  const loadStarredProjects = useCallback(() => {
+    const starred = starredService.getStarredProjects();
+    const starredIds = new Set(starred.map(p => p.id));
+    setStarredProjects(starredIds);
+  }, []);
+  
+  useEffect(() => {
+    // Only fetch when user has selected a filter
+    if (filterInitialized) {
+      fetchProjects();
+    }
+    loadStarredProjects();
+    fetchInvitationsCount();
+    
+    // Check if auth expired and show error
+    if (sessionStorage.getItem('authExpired')) {
+      sessionStorage.removeItem('authExpired');
+      setError('Your session has expired. Please login again.');
+    }
+    
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 3);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [filterInitialized, filterType, fetchProjects, loadStarredProjects, fetchInvitationsCount]);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+        setShowFilterMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  const getCountProjects = async (): Promise<number> => {
+    try {
+      const response = await apiCall('https://work-management-chi.vercel.app/projects/count', {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch project count: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.count;
+    } catch (error) {
+      console.error('Error in getCountProjects:', error);
+      throw error;
     }
   };
   
@@ -199,17 +379,23 @@ const ProjectsPage = () => {
   const handleProjectCreated = () => {
     fetchProjects();
   };
+  
+  // ✅ Invitations modal handlers
+  const handleOpenInvitationsModal = async () => {
+    console.log('Opening invitations modal...');
+    setShowInvitationsModal(true);
+    setInvitationsLoading(true);
+    await fetchInvitations();
+  };
+
+  const handleCloseInvitationsModal = () => {
+    setShowInvitationsModal(false);
+  };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
-  const loadStarredProjects = () => {
-    const starred = starredService.getStarredProjects();
-    const starredIds = new Set(starred.map(p => p.id));
-    setStarredProjects(starredIds);
-  };
-
   const handleToggleStar = (e: React.MouseEvent, project: ProjectWithDetails) => {
     e.stopPropagation();
     
@@ -235,6 +421,7 @@ const ProjectsPage = () => {
   
   const handleFilterChange = (type: 'all' | 'my') => {
     setFilterType(type);
+    setFilterInitialized(true);
     setShowFilterMenu(false);
   };
 
@@ -316,22 +503,49 @@ const ProjectsPage = () => {
               </div>
             </div>
 
-            <button 
-              onClick={handleOpenCreateModal}
-              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ml-4"
-            >
-              <Plus size={20} />
-              <span>New Project</span>
-            </button>
+            {/* ✅ NEW: Action Buttons Group */}
+            <div className="flex items-center gap-3 ml-4">
+              {/* Invitations Button */}
+              <button 
+                onClick={handleOpenInvitationsModal}
+                className="relative bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <Mail size={20} />
+                <span>Invitations</span>
+                {invitationsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                    {invitationsCount}
+                  </span>
+                )}
+              </button>
+
+              {/* New Project Button */}
+              <button 
+                onClick={handleOpenCreateModal}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+              >
+                <Plus size={20} />
+                <span>New Project</span>
+              </button>
+            </div>
           </div>
 
-          {/* ✅ UPDATED: Loading State với Loader icon */}
+          {/* Loading State */}
           {loading && (
             <div className="bg-white rounded-lg shadow-lg p-12 flex flex-col items-center justify-center">
               <Loader size={48} className="text-purple-500 animate-spin mb-4" />
               <p className="text-gray-600 text-lg">
                 Loading {filterType === 'my' ? 'your' : 'all'} projects...
               </p>
+            </div>
+          )}
+
+          {/* Initial State - Select Filter */}
+          {!filterInitialized && !loading && (
+            <div className="bg-white rounded-lg shadow-lg p-12 flex flex-col items-center justify-center">
+              <Filter size={64} className="text-gray-300 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">Select a filter to begin</h3>
+              <p className="text-gray-500">Choose "All Projects" or "My Projects" to view projects</p>
             </div>
           )}
 
@@ -349,7 +563,7 @@ const ProjectsPage = () => {
           )}
 
           {/* Projects Grid */}
-          {!loading && !error && (
+          {filterInitialized && !loading && !error && (
             <>
               {filteredProjects.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -475,6 +689,157 @@ const ProjectsPage = () => {
           onClose={handleCloseCreateModal}
           onProjectCreated={handleProjectCreated}
         />
+      )}
+
+      {/* ✅ Invitations Modal - Inline */}
+      {showInvitationsModal && (
+        <div className="modal-overlay" onClick={() => setShowInvitationsModal(false)}>
+          <div
+            className="invitations-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="invitations-modal-header">
+              <div className="header-title">
+                <Mail size={24} className="text-purple-500" />
+                <h2>Project Invitations</h2>
+                {invitations.length > 0 && (
+                  <span className="invitation-count-badge">
+                    {invitations.length}
+                  </span>
+                )}
+              </div>
+              <button 
+                className="close-button" 
+                onClick={() => setShowInvitationsModal(false)}
+                disabled={invitationsProcessing}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="invitations-modal-body">
+              {invitationsLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading invitations...</p>
+                </div>
+              ) : invitationsError && invitations.length === 0 ? (
+                <div className="error-container">
+                  <AlertCircle size={48} className="error-icon" />
+                  <p className="error-message">{invitationsError}</p>
+                  <button onClick={fetchInvitations} className="retry-button">
+                    Try Again
+                  </button>
+                </div>
+              ) : invitations.length === 0 ? (
+                <div className="empty-state">
+                  <Mail size={64} className="empty-icon" />
+                  <h3>No pending invitations</h3>
+                  <p>You don't have any project invitations at the moment</p>
+                </div>
+              ) : (
+                <>
+                  <div className="invitations-list">
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className={`invitation-item ${
+                          selectedInvitationId === invitation.id ? 'selected' : ''
+                        }`}
+                        onClick={() => !invitationsProcessing && handleInvitationClick(invitation.id)}
+                      >
+                        <div className="invitation-icon">
+                          <Users size={20} />
+                        </div>
+
+                        <div className="invitation-details">
+                          <h4 className="project-name">{invitation.project.name}</h4>
+                          <div className="invitation-meta">
+                            <span className="invited-by">
+                              Invited by <strong>{invitation.invitedBy.fullName}</strong>
+                            </span>
+                            {invitation.role && (
+                              <span className="role-badge">{invitation.role}</span>
+                            )}
+                          </div>
+                          <div className="invitation-time">
+                            <Clock size={14} />
+                            <span>{formatDate(invitation.invitedAt)}</span>
+                          </div>
+                        </div>
+
+                        {selectedInvitationId === invitation.id && (
+                          <div className="selection-check">
+                            <Check size={20} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Action Selection */}
+                  {selectedInvitationId && (
+                    <div className="action-section">
+                      <p className="action-label">Choose your action:</p>
+                      <div className="action-buttons">
+                        <button
+                          className={`action-button accept ${
+                            selectedAction === 'accept' ? 'active' : ''
+                          }`}
+                          onClick={() => handleActionChange('accept')}
+                          disabled={invitationsProcessing}
+                        >
+                          <Check size={18} />
+                          Accept
+                        </button>
+                        <button
+                          className={`action-button reject ${
+                            selectedAction === 'reject' ? 'active' : ''
+                          }`}
+                          onClick={() => handleActionChange('reject')}
+                          disabled={invitationsProcessing}
+                        >
+                          <XCircle size={18} />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            {invitations.length > 0 && selectedInvitationId && (
+              <div className="invitations-modal-footer">
+                {invitationsError && (
+                  <p className="error-message-inline">{invitationsError}</p>
+                )}
+                <div className="footer-actions">
+                  <button
+                    className="cancel-button"
+                    onClick={() => {
+                      setSelectedInvitationId(null);
+                      setSelectedAction(null);
+                    }}
+                    disabled={invitationsProcessing}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="confirm-button"
+                    onClick={handleConfirmInvitation}
+                    disabled={invitationsProcessing || !selectedAction}
+                  >
+                    {invitationsProcessing ? 'Processing...' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
