@@ -99,6 +99,13 @@ export class ProjectMembersService {
       })
       .returning();
 
+    // Send notification to invited user
+    await this.notificationHelper.notifyUserAddedToProject(
+      addMemberDto.userId,
+      projectId,
+      project.name,
+    );
+
     return member;
   }
 
@@ -311,6 +318,108 @@ export class ProjectMembersService {
 
     if (result.length === 0) {
       throw new NotFoundException('Member không tồn tại trong project');
+    }
+  }
+
+  async acceptInvitationById(invitationId: number, userId: number): Promise<ProjectMember> {
+    // Find invitation and verify it belongs to the user
+    const [invitation] = await this.db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.id, invitationId));
+
+    if (!invitation) {
+      throw new NotFoundException('Lời mời không tồn tại');
+    }
+
+    // Verify the invitation belongs to the authenticated user
+    if (invitation.userId !== userId) {
+      throw new ForbiddenException('Bạn không có quyền accept lời mời này');
+    }
+
+    // Verify invitation status
+    if (invitation.status !== 'invited') {
+      throw new ConflictException('Lời mời này đã được xử lý hoặc không còn hợp lệ');
+    }
+
+    // Get project info for notification
+    const [project] = await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, invitation.projectId));
+
+    // Update status to active
+    const [updated] = await this.db
+      .update(projectMembers)
+      .set({
+        status: 'active',
+        joinedAt: new Date(),
+      })
+      .where(eq(projectMembers.id, invitationId))
+      .returning();
+
+    // Send notification to user
+    try {
+      await this.notificationHelper.notifyUser(
+        userId,
+        'invitation_accepted',
+        'Bạn đã tham gia dự án',
+        `Bạn đã chấp nhận lời mời và trở thành thành viên của dự án "${project.name}"`,
+        undefined,
+        invitation.projectId,
+      );
+    } catch (error) {
+      console.error('Failed to send invitation acceptance notification:', error);
+    }
+
+    return updated;
+  }
+
+  async rejectInvitationById(invitationId: number, userId: number): Promise<void> {
+    // Find invitation and verify it belongs to the user
+    const [invitation] = await this.db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.id, invitationId));
+
+    if (!invitation) {
+      throw new NotFoundException('Lời mời không tồn tại');
+    }
+
+    // Verify the invitation belongs to the authenticated user
+    if (invitation.userId !== userId) {
+      throw new ForbiddenException('Bạn không có quyền reject lời mời này');
+    }
+
+    // Verify invitation status
+    if (invitation.status !== 'invited') {
+      throw new ConflictException('Lời mời này đã được xử lý hoặc không còn hợp lệ');
+    }
+
+    // Get project info for notification
+    const [project] = await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, invitation.projectId));
+
+    // Set status to 'removed' (rejected)
+    await this.db
+      .update(projectMembers)
+      .set({ status: 'removed' })
+      .where(eq(projectMembers.id, invitationId));
+
+    // Send notification to user
+    try {
+      await this.notificationHelper.notifyUser(
+        userId,
+        'invitation_rejected',
+        'Bạn đã từ chối lời mời',
+        `Bạn đã từ chối lời mời tham gia dú án "${project.name}"`,
+        undefined,
+        invitation.projectId,
+      );
+    } catch (error) {
+      console.error('Failed to send invitation rejection notification:', error);
     }
   }
 }
