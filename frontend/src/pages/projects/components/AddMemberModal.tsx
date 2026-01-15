@@ -232,7 +232,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
                         >
                           <option value="member">Member</option>
                           <option value="admin">Admin</option>
-                          <option value="admin">Viewer</option>
+                          <option value="viewer">Viewer</option>
                         </select>
                       </div>
                     )}

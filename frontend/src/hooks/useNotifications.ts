@@ -83,7 +83,7 @@ export const useNotifications = () => {
             unsubscribe();
             clearInterval(interval);
             clearTimeout(initialCheck);
-            websocketService.disconnect();
+            ///websocketService.disconnect();
             isInitialized.current = false;
         };
     }, [userId, loadNotifications]);
