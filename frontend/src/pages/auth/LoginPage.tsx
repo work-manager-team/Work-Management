@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Facebook, MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import userAuthService from '../../services/user/auth.service';
-
+import { websocketService } from '../../services/user/websocket.service';
 
 interface LoginPageProps {
     onLogin: () => void;
@@ -16,13 +16,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  //state cho gửi lại mail
+  
+  // State cho gửi lại mail
   const [showResendForm, setShowResendForm] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
   const [resendSuccess, setResendSuccess] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -44,20 +46,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       console.log('Login success:', response);
       
+      // 🔌 Kết nối WebSocket ngay sau khi login thành công
+      console.log('🚀 Kết nối WebSocket sau login...');
+      try {
+        await websocketService.connect();
+        console.log('✅ WebSocket connected successfully');
+      } catch (wsError) {
+        console.error('⚠️ WebSocket connection failed (non-critical):', wsError);
+        // WebSocket failure is non-critical, don't block login
+      }
+      
       // Call onLogin callback
       onLogin();
       
-      // Navigate to dashboard
-      // navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);
       
       setError(err.message || 'Login failed. Please try again.');
+      
       if (err.message === "Vui lòng xác thực email trước khi đăng nhập. Kiểm tra hộp thư của bạn.") {
         setNeedsVerification(true);
-        //auto-fill email nếu user nhập email
+        // Auto-fill email nếu user nhập email
         if (emailOrUsername.includes('@')) {
-            setResendEmail(emailOrUsername.trim());
+          setResendEmail(emailOrUsername.trim());
         }
       }
     } finally {
@@ -73,58 +84,52 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     navigate('/forgot-password');
   };
 
-  // handle resend VerificationEmail
+  // Handle resend verification email
   const handleResendVerification = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!resendEmail.trim() || !resendEmail.includes('@')) {
-        setResendMessage('Email không hợp lệ');
-        return;
-    }
-    // Basic email validation
-    if (!resendEmail.includes('@')) {
       setResendMessage('Email không hợp lệ');
       return;
     }
+    
     setResending(true);
     setResendMessage('');
     setResendSuccess(false);
 
     try {
-        console.log('📤 Resending verification email to:', resendEmail);
-        const response = await fetch(
-            'https://work-management-chi.vercel.app/auth/resend-verification',
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: resendEmail.trim() }),
-            }
-        );
+      console.log('📤 Resending verification email to:', resendEmail);
+      const response = await fetch(
+        'https://work-management-chi.vercel.app/auth/resend-verification',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resendEmail.trim() }),
+        }
+      );
 
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.message);
-        
-        setResendSuccess(true);
-        setResendMessage('Email xác thực đã được gửi lại! Vui lòng kiểm tra hộp thư.');
-        
-        // Auto-close sau 5s
-        setTimeout(() => {
-            setShowResendForm(false);
-            setResendEmail('');
-            setResendMessage('');
-            setResendSuccess(false);
-        }, 5000);
-        
-    } catch (error: any) {
-        setResendMessage(error.message || 'Gửi lại thất bại');
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.message);
+      
+      setResendSuccess(true);
+      setResendMessage('Email xác thực đã được gửi lại! Vui lòng kiểm tra hộp thư.');
+      
+      // Auto-close sau 5s
+      setTimeout(() => {
+        setShowResendForm(false);
+        setResendEmail('');
+        setResendMessage('');
         setResendSuccess(false);
+      }, 5000);
+      
+    } catch (error: any) {
+      setResendMessage(error.message || 'Gửi lại thất bại');
+      setResendSuccess(false);
     } finally {
-        setResending(false);
+      setResending(false);
     }
   };
-
- 
 
   return (
     <div className="min-h-screen bg-purple-400 flex items-center justify-center p-4">
@@ -141,22 +146,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <p className="text-red-600 text-sm text-center">{error}</p>
           </div>
         )}
-        {/* ✅ NEW: Resend Verification Section */}
+
+        {/* Resend Verification Section */}
         {needsVerification && (
           <div className="mb-4">
             {!showResendForm ? (
-              // Show button to open form
               <button
                 onClick={() => setShowResendForm(true)}
                 className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
               >
                 <p className="text-blue-700 text-sm font-medium text-center">
-                   Bạn chưa nhận được email xác thực?{' '}
+                  Bạn chưa nhận được email xác thực?{' '}
                   <span className="underline">Click vào đây để nhận mail xác thực</span>
                 </p>
               </button>
             ) : (
-              // Show resend form
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <div className="flex justify-end mb-3">
                   <button
@@ -173,7 +177,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     </svg>
                   </button>
                 </div>
-                
                 
                 <form onSubmit={handleResendVerification} className="space-y-3">
                   <input
@@ -216,8 +219,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     )}
                   </button>
                 </form>
-                
-                
               </div>
             )}
           </div>
@@ -246,14 +247,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               Password
             </label>
             <div className="relative">
-            <input
+              <input
                 type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="Enter your password"
+                placeholder="Enter your password"
                 disabled={loading}
-            />
+              />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -265,15 +266,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </div>
 
           {/* Forgot Password */}
-            <div className="text-right">
+          <div className="text-right">
             <button
               type="button"
               onClick={handleForgotPassword}
               className="text-sm text-purple-500 hover:text-purple-600"
             >
-                Forgot password?
-              </button>
-            </div>
+              Forgot password?
+            </button>
+          </div>
 
           {/* Submit Button */}
           <button
@@ -293,7 +294,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               'Login'
             )}
           </button>
-          
         </form>
 
         {/* Toggle Login/Register */}

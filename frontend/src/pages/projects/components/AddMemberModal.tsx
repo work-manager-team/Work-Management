@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, User, Search, Check } from 'lucide-react';
+import { X, User, Search, Check, ChevronDown } from 'lucide-react';
 import projectService, { User as UserType } from '../../../services/user/project.service';
 import authService from '../../../services/user/auth.service';
 import './AddMemberModal.css';
@@ -19,7 +19,10 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
 }) => {
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserType[]>([]);
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
+  
+  // ✅ THAY ĐỔI: Dùng Map để lưu userId và role
+  const [selectedUsers, setSelectedUsers] = useState<Map<number, string>>(new Map());
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -65,18 +68,26 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
     }
   };
 
+  // ✅ THAY ĐỔI: Toggle user selection với role mặc định là 'member'
   const toggleUserSelection = (userId: number) => {
-    const newSelection = new Set(selectedUserIds);
+    const newSelection = new Map(selectedUsers);
     if (newSelection.has(userId)) {
       newSelection.delete(userId);
     } else {
-      newSelection.add(userId);
+      newSelection.set(userId, 'member'); // Default role
     }
-    setSelectedUserIds(newSelection);
+    setSelectedUsers(newSelection);
+  };
+
+  // ✅ MỚI: Hàm thay đổi role của user
+  const handleRoleChange = (userId: number, newRole: string) => {
+    const newSelection = new Map(selectedUsers);
+    newSelection.set(userId, newRole);
+    setSelectedUsers(newSelection);
   };
 
   const handleAddMembers = async () => {
-    if (selectedUserIds.size === 0) {
+    if (selectedUsers.size === 0) {
       setError('Please select at least one user to add');
       return;
     }
@@ -85,9 +96,9 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
     setError(null);
 
     try {
-      // Add members one by one
-      const promises = Array.from(selectedUserIds).map(userId =>
-        projectService.addProjectMember(projectId, userId, 'member')
+      // ✅ THAY ĐỔI: Add members với role tương ứng
+      const promises = Array.from(selectedUsers.entries()).map(([userId, role]) =>
+        projectService.addProjectMember(projectId, userId, role)
       );
 
       await Promise.all(promises);
@@ -156,38 +167,84 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
             </div>
           ) : (
             <div className="users-list">
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className={`user-item ${
-                    selectedUserIds.has(user.id) ? 'selected' : ''
-                  }`}
-                  onClick={() => !adding && toggleUserSelection(user.id)}
-                >
-                  <div className="user-info">
-                    {user.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.fullName}
-                        className="user-avatar"
-                      />
-                    ) : (
-                      <div className="user-avatar-placeholder">
-                        <User size={20} />
+              {filteredUsers.map((user) => {
+                const isSelected = selectedUsers.has(user.id);
+                const userRole = selectedUsers.get(user.id) || 'member';
+
+                return (
+                  <div
+                    key={user.id}
+                    className={`user-item ${isSelected ? 'selected' : ''}`}
+                  >
+                    {/* ✅ User Info - Clickable để toggle selection */}
+                    <div
+                      className="user-info"
+                      onClick={() => !adding && toggleUserSelection(user.id)}
+                      style={{ cursor: adding ? 'default' : 'pointer', flex: 1 }}
+                    >
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.fullName}
+                          className="user-avatar"
+                        />
+                      ) : (
+                        <div className="user-avatar-placeholder">
+                          <User size={20} />
+                        </div>
+                      )}
+                      <div className="user-details">
+                        <span className="user-name">{user.fullName}</span>
+                        <span className="user-email">{user.email}</span>
+                      </div>
+                    </div>
+
+                    {/* ✅ MỚI: Role Dropdown - Chỉ hiển thị khi user được chọn */}
+                    {isSelected && (
+                      <div 
+                        className="role-selector"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          marginRight: '12px',
+                          position: 'relative',
+                        }}
+                      >
+                        <select
+                          value={userRole}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                          disabled={adding}
+                          style={{
+                            padding: '6px 32px 6px 12px',
+                            fontSize: '14px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            backgroundColor: '#ffffff',
+                            color: '#374151',
+                            cursor: adding ? 'not-allowed' : 'pointer',
+                            appearance: 'none',
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 8px center',
+                            outline: 'none',
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        >
+                          <option value="member">Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
                       </div>
                     )}
-                    <div className="user-details">
-                      <span className="user-name">{user.fullName}</span>
-                      <span className="user-email">{user.email}</span>
+
+                    {/* Selection Indicator */}
+                    <div className="selection-indicator">
+                      {isSelected && (
+                        <Check size={20} className="check-icon" />
+                      )}
                     </div>
                   </div>
-                  <div className="selection-indicator">
-                    {selectedUserIds.has(user.id) && (
-                      <Check size={20} className="check-icon" />
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -199,7 +256,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
           )}
           <div className="footer-actions">
             <p className="selected-count">
-              {selectedUserIds.size} user{selectedUserIds.size !== 1 ? 's' : ''}{' '}
+              {selectedUsers.size} user{selectedUsers.size !== 1 ? 's' : ''}{' '}
               selected
             </p>
             <div className="button-group">
@@ -213,7 +270,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({
               <button
                 className="add-button"
                 onClick={handleAddMembers}
-                disabled={adding || selectedUserIds.size === 0}
+                disabled={adding || selectedUsers.size === 0}
               >
                 {adding ? 'Adding...' : 'Add'}
               </button>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Facebook, MessageCircle, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +16,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
     password: '',
     confirmPassword: '',
     fullName: '',
-    avatarUrl: ''
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +30,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user types
     if (error) setError(null);
   };
 
@@ -47,7 +44,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
       return false;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
@@ -83,6 +79,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
     setError(null);
 
     try {
+      // Register user
       const response = await userAuthService.register({
         username: formData.username.trim(),
         email: formData.email.trim(),
@@ -91,17 +88,43 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
       });
 
       console.log('Registration success:', response);
+
+      // ✅ Gửi verification email
+      try {
+        const verifyResponse = await fetch(
+          'https://work-management-chi.vercel.app/auth/resend-verification',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email.trim(),
+            }),
+          }
+        );
+
+        const verifyData = await verifyResponse.json();
+
+        if (verifyResponse.ok) {
+          console.log('Verification email sent:', verifyData);
+        } else {
+          console.warn('Verification email could not be sent:', verifyData);
+        }
+      } catch (verifyError) {
+        console.error('Verification error:', verifyError);
+      }
+      
       setSuccess(true);
       
-      // Call onRegister callback if provided
       if (onRegister) {
         onRegister();
       }
 
-      // Redirect to login after 2 seconds
+      // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate('/login');
-      }, 2000);
+      }, 3000);
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');
@@ -114,7 +137,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
     navigate('/login');
   };
 
-  
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center p-4">
@@ -125,8 +147,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
             Registration Successful!
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 mb-2">
             Your account has been created successfully.
+          </p>
+          <p className="text-gray-600 mb-4">
+            Please check your email to verify your account.
           </p>
           <p className="text-gray-500 text-sm">
             Redirecting to login page...
@@ -202,7 +227,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
             />
           </div>
 
-          
           {/* Password */}
           <div>
             <label className="block text-gray-700 text-sm font-medium mb-2">
@@ -252,7 +276,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
               </button>
             </div>
           </div>
-          
 
           {/* Submit Button */}
           <button
@@ -287,7 +310,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister }) => {
           </p>
         </div>
 
-        
         {/* Terms */}
         <div className="text-center mt-8">
           <p className="text-xs text-gray-500">

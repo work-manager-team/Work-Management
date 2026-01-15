@@ -1,0 +1,47 @@
+import { useEffect, useState, useCallback } from 'react';
+import { websocketService, NotificationData } from '../services/user/websocket.service';
+import userAuthService from '../services/user/auth.service';
+
+export const useWebSocket = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [latestNotification, setLatestNotification] = useState<NotificationData | null>(null);
+
+  useEffect(() => {
+    const user = userAuthService.getCurrentUser();
+    if (!user) {
+      console.log('No user found, skipping WebSocket connection');
+      return;
+    }
+
+    // Connect to WebSocket
+    websocketService.connect();
+
+    // Subscribe to notifications
+    const unsubscribe = websocketService.onNotification((notification) => {
+      setLatestNotification(notification);
+    });
+
+    // Check connection status periodically
+    const interval = setInterval(() => {
+      setIsConnected(websocketService.isConnected());
+    }, 1000);
+
+    // Cleanup
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+      websocketService.disconnect();
+    };
+  }, []);
+
+  const reconnect = useCallback(() => {
+    websocketService.disconnect();
+    websocketService.connect();
+  }, []);
+
+  return {
+    isConnected,
+    latestNotification,
+    reconnect,
+  };
+};

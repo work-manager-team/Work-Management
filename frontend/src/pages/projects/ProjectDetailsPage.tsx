@@ -20,6 +20,14 @@ interface Sprint {
   updatedAt: string;
 }
 
+// ✅ MỚI: Interface cho member
+interface ProjectMember {
+  userId: number;
+  role: string;
+  status?: string;
+  [key: string]: any;
+}
+
 const ProjectDetailsPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -30,6 +38,9 @@ const ProjectDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  
+  // State để lưu số lượng members có role là "member"
+  const [activeMemberCount, setActiveMemberCount] = useState<number>(0);
   
   // Sprint modal states
   const [showSprintsModal, setShowSprintsModal] = useState(false);
@@ -43,6 +54,7 @@ const ProjectDetailsPage: React.FC = () => {
   useEffect(() => {
     if (projectId) {
       fetchProjectDetails();
+      fetchActiveMemberCount();
     }
   }, [projectId]);
 
@@ -67,6 +79,42 @@ const ProjectDetailsPage: React.FC = () => {
       setError(err.message || 'Failed to load project details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ UPDATED: Hàm fetch và đếm active members với role = "member"
+  const fetchActiveMemberCount = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `https://work-management-chi.vercel.app/projects/${projectId}/members/active`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch active members');
+      }
+
+      const members: ProjectMember[] = await response.json();
+      
+      // ✅ Đếm chỉ những member có role là "member" (không phân biệt chữ hoa/thường)
+      const memberCount = Array.isArray(members) 
+        ? members.filter(member => 
+            member.role && member.role.toLowerCase() === 'member' || member.role.toLowerCase() === 'admin'
+          ).length 
+        : 0;
+      
+      setActiveMemberCount(memberCount);
+      
+      console.log('📊 Active members with role "member":', memberCount);
+      console.log('📋 All members:', members);
+    } catch (err) {
+      console.error('Error fetching active members:', err);
+      setActiveMemberCount(0);
     }
   };
 
@@ -198,6 +246,7 @@ const ProjectDetailsPage: React.FC = () => {
   const handleUpdateProject = (updatedProject: ProjectDetails) => {
     setProject(updatedProject);
     fetchProjectDetails();
+    fetchActiveMemberCount(); // Refresh member count khi update project
   };
 
   const handleDeleteProject = () => {
@@ -256,8 +305,9 @@ const ProjectDetailsPage: React.FC = () => {
               <Users size={24} />
             </div>
             <div className="stat-info">
+              {/* ✅ UPDATED: Label thay đổi để rõ ràng hơn */}
               <p className="stat-label">Members</p>
-              <p className="stat-value">{project.memberCount}</p>
+              <p className="stat-value">{activeMemberCount}</p>
             </div>
           </div>
 

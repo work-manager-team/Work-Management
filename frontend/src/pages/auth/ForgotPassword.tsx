@@ -1,223 +1,273 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './ForgotPassword.css';
-
-interface ForgotPasswordResponse {
-  statusCode: number;
-  message: string;
-  token: string;
-  userId: number;
-  email: string;
-}
+import { ArrowLeft } from 'lucide-react';
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'email' | 'reset'>('email');
+  
+  // Step 1: Email, Step 2: OTP + Password
+  const [step, setStep] = useState<1 | 2>(1);
+  
+  // Form data
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  // Bước 1: Gửi email để nhận token
-  const handleSendEmail = async (e: React.FormEvent) => {
+  // Step 1: Send OTP to email
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setSuccess('');
 
-    try {
-      const response = await fetch('https://work-management-chi.vercel.app/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data: ForgotPasswordResponse = await response.json();
-
-      if (response.ok) {
-        // Lưu token vào localStorage (do backend chưa gửi mail được)
-        localStorage.setItem('resetPasswordToken', data.token);
-        localStorage.setItem('resetPasswordEmail', data.email);
-        
-        // Chuyển sang bước nhập mật khẩu mới
-        setStep('reset');
-      } else {
-        setError(data.message || 'Có lỗi xảy ra, vui lòng thử lại');
-      }
-    } catch (err) {
-      setError('Không thể kết nối đến server');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Bước 2: Đặt lại mật khẩu mới
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // Validate mật khẩu
-    if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+    if (!email.trim()) {
+      setError('Please enter your email');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Lấy token từ localStorage
-      const token = localStorage.getItem('resetPasswordToken');
-      
-      if (!token) {
-        setError('Token không hợp lệ, vui lòng thử lại');
-        setStep('email');
-        return;
-      }
-
-      const response = await fetch('https://work-management-chi.vercel.app/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          newPassword,
-        }),
-      });
+      const response = await fetch(
+        'https://work-management-chi.vercel.app/auth/forgot-password',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: email.trim() }),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok) {
-        // Xóa token khỏi localStorage
-        localStorage.removeItem('resetPasswordToken');
-        localStorage.removeItem('resetPasswordEmail');
-        
-        // Thông báo thành công
-        alert('Đã tạo mật khẩu mới thành công');
-        
-        // Điều hướng về trang Login
-        navigate('/forgot-password');
+        setSuccess('OTP sent to your email. Please check your inbox.');
+        setStep(2);
       } else {
-        setError(data.message || 'Có lỗi xảy ra, vui lòng thử lại');
+        setError(data.message || 'Failed to send OTP');
       }
     } catch (err) {
-      setError('Không thể kết nối đến server');
-      console.error('Error:', err);
+      console.error('Forgot password error:', err);
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Step 2: Reset password with OTP
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validation
+    if (!otp.trim()) {
+      setError('Please enter OTP');
+      return;
+    }
+
+    if (!newPassword.trim()) {
+      setError('Please enter new password');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        'https://work-management-chi.vercel.app/auth/reset-password',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            otp: otp.trim(),
+            newPassword: newPassword.trim(),
+            confirmPassword: confirmPassword.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Password reset successfully! Redirecting to login...');
+        
+        // Reset form and redirect
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      } else {
+        setError(data.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      console.error('Reset password error:', err);
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBackToStep1 = () => {
+    setStep(1);
+    setOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setError('');
+    setSuccess('');
+  };
+
   return (
-    <div className="forgot-password-container">
-      <div className="forgot-password-card">
-        {step === 'email' ? (
-          // Form nhập email
-          <>
-            <h2>Quên mật khẩu</h2>
-            <p className="description">
-              Nhập địa chỉ email của bạn để nhận link đặt lại mật khẩu
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-purple-500">Reset Password</h2>
+          <button
+            onClick={() => navigate('/login')}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <ArrowLeft size={24} />
+          </button>
+        </div>
+
+        {/* Step 1: Email */}
+        {step === 1 && (
+          <div>
+            <p className="text-gray-600 text-sm mb-6">
+              Enter your email address and we'll send you an OTP to reset your password.
             </p>
-            
-            <form onSubmit={handleSendEmail}>
-              {error && <div className="error-message">{error}</div>}
-              
-              <div className="form-group">
-                <label htmlFor="email">Email</label>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSendOTP} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  Email
+                </label>
                 <input
                   type="email"
-                  id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Nhập email của bạn"
-                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                  placeholder="Enter your email"
                   disabled={loading}
                 />
               </div>
 
-              <button 
-                type="submit" 
-                className="btn-primary"
-                disabled={loading}
-              >
-                {loading ? 'Đang gửi...' : 'Gửi'}
-              </button>
-
               <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => navigate('/login')}
+                type="submit"
                 disabled={loading}
+                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-semibold py-3 rounded-full transition duration-200 shadow-lg hover:shadow-xl"
               >
-                Quay lại đăng nhập
+                {loading ? 'Sending...' : 'Send OTP'}
               </button>
             </form>
-          </>
-        ) : (
-          // Form nhập mật khẩu mới
-          <>
-            <h2>Đặt lại mật khẩu</h2>
-            <p className="description">
-              Nhập mật khẩu mới cho tài khoản {localStorage.getItem('resetPasswordEmail')}
+          </div>
+        )}
+
+        {/* Step 2: OTP & Password */}
+        {step === 2 && (
+          <div>
+            <p className="text-gray-600 text-sm mb-6">
+              Enter the OTP sent to your email and your new password.
             </p>
-            
-            <form onSubmit={handleResetPassword}>
-              {error && <div className="error-message">{error}</div>}
-              
-              <div className="form-group">
-                <label htmlFor="newPassword">Mật khẩu mới</label>
+
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-600 text-sm">{success}</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  OTP
+                </label>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                  placeholder="Enter OTP"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  New Password
+                </label>
                 <input
                   type="password"
-                  id="newPassword"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu mới"
-                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                  placeholder="Enter new password"
                   disabled={loading}
-                  minLength={6}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  Confirm Password
+                </label>
                 <input
                   type="password"
-                  id="confirmPassword"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Nhập lại mật khẩu mới"
-                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                  placeholder="Confirm password"
                   disabled={loading}
-                  minLength={6}
                 />
               </div>
 
-              <button 
-                type="submit" 
-                className="btn-primary"
+              <button
+                type="submit"
                 disabled={loading}
+                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-semibold py-3 rounded-full transition duration-200 shadow-lg hover:shadow-xl"
               >
-                {loading ? 'Đang lưu...' : 'Lưu'}
+                {loading ? 'Resetting...' : 'Reset Password'}
               </button>
 
               <button
                 type="button"
-                className="btn-secondary"
-                onClick={() => setStep('email')}
+                onClick={handleBackToStep1}
                 disabled={loading}
+                className="w-full border border-purple-500 text-purple-500 hover:bg-purple-50 font-semibold py-3 rounded-full transition duration-200"
               >
-                Quay lại
+                Back
               </button>
             </form>
-          </>
+          </div>
         )}
       </div>
     </div>
