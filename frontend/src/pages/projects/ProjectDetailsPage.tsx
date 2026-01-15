@@ -535,34 +535,7 @@ const ProjectDetailsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => handleNavigateToCalendar(sprint)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            fontSize: '13px',
-                            fontWeight: 500,
-                            color: '#2563eb',
-                            backgroundColor: 'transparent',
-                            border: '1px solid #2563eb',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#2563eb';
-                            e.currentTarget.style.color = '#ffffff';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#2563eb';
-                          }}
-                        >
-                          <ExternalLink size={14} />
-                          View in Calendar
-                        </button>
+                        
                       </div>
                     ))}
                   </div>
