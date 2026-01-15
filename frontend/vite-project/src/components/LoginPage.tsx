@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Facebook, MessageCircle } from 'lucide-react';
+import { Facebook, MessageCircle, ArrowLeft } from 'lucide-react';
+import { websocketService } from '../services/websocket.service';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -12,6 +13,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
+
+  // Forgot Password states
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: Email, 2: OTP + Password
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
 
   const handleSubmit = async () => {
     if (isLogin) {
@@ -40,6 +52,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           if (data.accessToken) {
             localStorage.setItem("accessToken", data.accessToken);
           }
+
+          // 🔌 Kết nối WebSocket ngay sau khi login thành công
+          console.log('🚀 Kết nối WebSocket sau login...');
+          await websocketService.connect();
 
           onLogin(); // gọi callback từ props
         } else {
@@ -127,6 +143,119 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
   };
 
+  const handleForgotPasswordEmail = async () => {
+    if (!forgotEmail.trim()) {
+      setForgotPasswordError('Please enter your email');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+
+    try {
+      const response = await fetch(
+        "https://work-management-chi.vercel.app/auth/forgot-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: forgotEmail,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setForgotPasswordSuccess('OTP sent to your email. Please check your inbox.');
+        setForgotPasswordStep(2);
+      } else {
+        setForgotPasswordError(data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      setForgotPasswordError('An error occurred. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!otp.trim()) {
+      setForgotPasswordError('Please enter OTP');
+      return;
+    }
+
+    if (!newPassword.trim()) {
+      setForgotPasswordError('Please enter new password');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setForgotPasswordError('Passwords do not match');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+
+    try {
+      const response = await fetch(
+        "https://work-management-chi.vercel.app/auth/reset-password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: forgotEmail,
+            otp: otp,
+            newPassword: newPassword,
+            confirmPassword: confirmPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setForgotPasswordSuccess('Password reset successfully! Returning to login...');
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep(1);
+          setForgotEmail('');
+          setOtp('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setForgotPasswordError('');
+          setForgotPasswordSuccess('');
+        }, 2000);
+      } else {
+        setForgotPasswordError(data.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error("Reset password error:", error);
+      setForgotPasswordError('An error occurred. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    setForgotPasswordStep(1);
+    setForgotEmail('');
+    setOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
@@ -203,7 +332,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           {/* Forgot Password (chỉ hiển thị khi Login) */}
           {isLogin && (
             <div className="text-right">
-              <button className="text-sm text-purple-500 hover:text-purple-600">
+              <button
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-purple-500 hover:text-purple-600"
+              >
                 Forgot password?
               </button>
             </div>
@@ -231,47 +363,138 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           </p>
         </div>
 
-        {/* Divider */}
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">Or continue with</span>
-          </div>
-        </div>
 
-        {/* Social Login */}
-        <div className="flex justify-center space-x-4">
-          <button className="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
-            <Facebook size={24} />
-          </button>
 
-          <button className="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
-            <MessageCircle size={24} />
-          </button>
-
-          <button className="w-12 h-12 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full flex items-center justify-center transition duration-200 shadow-md hover:shadow-lg transform hover:scale-110">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.654-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Terms */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-gray-500">
-            By continuing, you agree to our{' '}
-            <button className="text-purple-500 hover:text-purple-600">
-              Terms of Service
-            </button>{' '}
-            and{' '}
-            <button className="text-purple-500 hover:text-purple-600">
-              Privacy Policy
-            </button>
-          </p>
-        </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-purple-500">Reset Password</h2>
+              <button
+                onClick={closeForgotPassword}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <ArrowLeft size={24} className="transform rotate-180" />
+              </button>
+            </div>
+
+            {/* Step 1: Email */}
+            {forgotPasswordStep === 1 && (
+              <div className="space-y-4">
+                <p className="text-gray-600 text-sm mb-4">
+                  Enter your email address and we'll send you an OTP to reset your password.
+                </p>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">
+                    Email:
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    placeholder="Enter your email"
+                  />
+                </div>
+
+                {forgotPasswordError && (
+                  <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                    {forgotPasswordError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleForgotPasswordEmail}
+                  disabled={forgotPasswordLoading}
+                  className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-semibold py-3 rounded-full transition duration-200 shadow-lg hover:shadow-xl"
+                >
+                  {forgotPasswordLoading ? 'Sending...' : 'Send OTP'}
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: OTP & Password */}
+            {forgotPasswordStep === 2 && (
+              <div className="space-y-4">
+                <p className="text-gray-600 text-sm mb-4">
+                  Enter the OTP sent to your email and your new password.
+                </p>
+
+                {forgotPasswordSuccess && (
+                  <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg text-sm">
+                    {forgotPasswordSuccess}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">
+                    OTP:
+                  </label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    placeholder="Enter OTP"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">
+                    New Password:
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    placeholder="Enter new password"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 text-sm font-medium mb-2">
+                    Confirm Password:
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    placeholder="Confirm password"
+                  />
+                </div>
+
+                {forgotPasswordError && (
+                  <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                    {forgotPasswordError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleResetPassword}
+                  disabled={forgotPasswordLoading}
+                  className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-semibold py-3 rounded-full transition duration-200 shadow-lg hover:shadow-xl"
+                >
+                  {forgotPasswordLoading ? 'Resetting...' : 'Reset Password'}
+                </button>
+
+                <button
+                  onClick={() => setForgotPasswordStep(1)}
+                  className="w-full border border-purple-500 text-purple-500 hover:bg-purple-50 font-semibold py-3 rounded-full transition duration-200"
+                >
+                  Back
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

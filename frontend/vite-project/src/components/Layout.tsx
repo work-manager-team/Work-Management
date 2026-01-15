@@ -4,7 +4,6 @@ import { Star, Users, Plus, MoreHorizontal, Calendar, Bell, Folder, Settings, Ta
 import { ChevronDown } from 'lucide-react'
 import Toast from './Toast';
 import { useNotification } from '../context/NotificationContext';
-import { websocketService } from '../services/websocket.service';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -14,8 +13,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string>('');
-    const [isReconnecting, setIsReconnecting] = useState(false);
-    const { toasts, removeToast, isConnected, reconnect } = useNotification();
+    const { toasts, removeToast } = useNotification();
 
     useEffect(() => {
         fetchAvatarUrl();
@@ -204,22 +202,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
                 </div>
 
                 {/* Connection Status Indicator */}
-                {!isConnected && (
-                    <button
-                        onClick={() => {
-                            if (!isReconnecting) {
-                                setIsReconnecting(true);
-                                reconnect();
-                                setTimeout(() => setIsReconnecting(false), 3000);
-                            }
-                        }}
-                        disabled={isReconnecting}
-                        className={`fixed bottom-4 right-4 text-white px-4 py-2 rounded-lg text-sm shadow-lg cursor-pointer hover:opacity-90 transition-all ${isReconnecting ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                    >
-                        {isReconnecting ? '🔄 Đang kết nối lại...' : '⚠️ Offline - Click để kết nối lại'}
-                    </button>
-                )}
+                {/* ✅ REMOVED: Reconnect button - WebSocket auto-reconnects now */}
             </div>
         </div>
     );
