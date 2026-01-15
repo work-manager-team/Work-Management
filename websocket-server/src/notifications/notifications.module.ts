@@ -9,7 +9,7 @@ import { NotificationsController } from './notifications.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'default-secret',
+        secret: configService.get<string>('JWT_EMAIL_SECRET') || 'default-secret',
         signOptions: {
           expiresIn: '7d',
         },
