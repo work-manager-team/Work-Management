@@ -4,6 +4,7 @@ import { Star, Users, Plus, MoreHorizontal, Calendar, Bell, Folder, Settings, Ta
 import { ChevronDown } from 'lucide-react'
 import Toast from './Toast';
 import { useNotification } from '../context/NotificationContext';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -14,6 +15,9 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string>('');
     const { toasts, removeToast } = useNotification();
+
+    // Initialize WebSocket connection for all pages
+    useWebSocket();
 
     useEffect(() => {
         fetchAvatarUrl();

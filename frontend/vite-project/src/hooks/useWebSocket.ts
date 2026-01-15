@@ -2,7 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { websocketService, NotificationData } from '../services/websocket.service';
 import { authService } from '../services/auth.service';
 
-export const useWebSocket = () => {
+interface UseWebSocketOptions {
+  autoDisconnect?: boolean; // If false, don't disconnect on unmount (useful for app-wide connection)
+}
+
+export const useWebSocket = (options: UseWebSocketOptions = { autoDisconnect: false }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [latestNotification, setLatestNotification] = useState<NotificationData | null>(null);
 
@@ -30,9 +34,13 @@ export const useWebSocket = () => {
     return () => {
       unsubscribe();
       clearInterval(interval);
-      websocketService.disconnect();
+
+      // Only disconnect if autoDisconnect is explicitly true
+      if (options.autoDisconnect) {
+        websocketService.disconnect();
+      }
     };
-  }, []);
+  }, [options.autoDisconnect]);
 
   const reconnect = useCallback(() => {
     websocketService.disconnect();
