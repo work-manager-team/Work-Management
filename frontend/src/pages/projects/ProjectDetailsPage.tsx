@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Calendar, Users, BarChart3, CheckCircle2, Clock, Settings, X, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, BarChart3, CheckCircle2, Clock, Settings, X, ExternalLink, Loader } from 'lucide-react';
 import projectService, { ProjectDetails } from '../../services/user/project.service';
 import './ProjectDetailsPage.css';
 import ProjectSettingsModal from './components/ProjectSettingsModal';
@@ -20,7 +20,6 @@ interface Sprint {
   updatedAt: string;
 }
 
-// ✅ MỚI: Interface cho member
 interface ProjectMember {
   userId: number;
   role: string;
@@ -39,16 +38,13 @@ const ProjectDetailsPage: React.FC = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   
-  // State để lưu số lượng members có role là "member"
   const [activeMemberCount, setActiveMemberCount] = useState<number>(0);
   
-  // Sprint modal states
   const [showSprintsModal, setShowSprintsModal] = useState(false);
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [sprintFilter, setSprintFilter] = useState<'all' | 'completed'>('all');
 
-  // Get event type from navigation state
   const eventType = (location.state as any)?.eventType || 'view-detail';
 
   useEffect(() => {
@@ -58,7 +54,6 @@ const ProjectDetailsPage: React.FC = () => {
     }
   }, [projectId]);
 
-  // Open appropriate modal based on event type
   useEffect(() => {
     if (project && eventType) {
       if (eventType === 'view-members') {
@@ -82,7 +77,6 @@ const ProjectDetailsPage: React.FC = () => {
     }
   };
 
-  // ✅ UPDATED: Hàm fetch và đếm active members với role = "member"
   const fetchActiveMemberCount = async () => {
     try {
       const accessToken = localStorage.getItem('accessToken');
@@ -101,10 +95,9 @@ const ProjectDetailsPage: React.FC = () => {
 
       const members: ProjectMember[] = await response.json();
       
-      // ✅ Đếm chỉ những member có role là "member" (không phân biệt chữ hoa/thường)
       const memberCount = Array.isArray(members) 
         ? members.filter(member => 
-            member.role && member.role.toLowerCase() === 'member' || member.role.toLowerCase() === 'admin'
+            member.role && (member.role.toLowerCase() === 'member' || member.role.toLowerCase() === 'admin')
           ).length 
         : 0;
       
@@ -137,7 +130,6 @@ const ProjectDetailsPage: React.FC = () => {
 
       const data = await response.json();
       
-      // Filter sprints based on status
       let filteredSprints = data;
       if (filter === 'completed') {
         filteredSprints = data.filter((sprint: Sprint) => 
@@ -165,7 +157,6 @@ const ProjectDetailsPage: React.FC = () => {
   };
 
   const handleNavigateToCalendar = (sprint: Sprint) => {
-    // Navigate to calendar with project and month info
     const sprintMonth = new Date(sprint.startDate);
     
     navigate('/calendar', {
@@ -217,12 +208,19 @@ const ProjectDetailsPage: React.FC = () => {
     return Math.round((project.completedSprints / project.totalSprints) * 100);
   };
 
+  // ✅ UPDATED: Loading state với Loader icon
   if (loading) {
     return (
       <div className="project-details-page">
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>Loading project details...</p>
+        <div className="loading-container" style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '80px 20px'
+        }}>
+          <Loader size={48} className="text-purple-500 animate-spin mb-4" />
+          <p style={{ fontSize: '18px', color: '#6b7280' }}>Loading project details...</p>
         </div>
       </div>
     );
@@ -246,7 +244,7 @@ const ProjectDetailsPage: React.FC = () => {
   const handleUpdateProject = (updatedProject: ProjectDetails) => {
     setProject(updatedProject);
     fetchProjectDetails();
-    fetchActiveMemberCount(); // Refresh member count khi update project
+    fetchActiveMemberCount();
   };
 
   const handleDeleteProject = () => {
@@ -305,7 +303,6 @@ const ProjectDetailsPage: React.FC = () => {
               <Users size={24} />
             </div>
             <div className="stat-info">
-              {/* ✅ UPDATED: Label thay đổi để rõ ràng hơn */}
               <p className="stat-label">Members</p>
               <p className="stat-value">{activeMemberCount}</p>
             </div>
@@ -441,10 +438,17 @@ const ProjectDetailsPage: React.FC = () => {
 
               {/* Body */}
               <div className="modal-body" style={{ overflowY: 'auto' }}>
+                {/* ✅ UPDATED: Loading sprints với Loader icon */}
                 {loadingSprints ? (
-                  <div className="loading-container" style={{ padding: '40px' }}>
-                    <div className="loading-spinner"></div>
-                    <p>Loading sprints...</p>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    padding: '40px'
+                  }}>
+                    <Loader size={40} className="text-purple-500 animate-spin mb-3" />
+                    <p style={{ color: '#6b7280' }}>Loading sprints...</p>
                   </div>
                 ) : sprints.length === 0 ? (
                   <div className="empty-state" style={{ padding: '40px' }}>

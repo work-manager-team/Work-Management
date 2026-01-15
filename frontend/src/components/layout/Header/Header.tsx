@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, User, LogOut, Plus, Search } from 'lucide-react';
 import './header.css';
 import CreateProjectModal from '../../../pages/projects/components/CreateProjectModal';
 import CreateTaskModal from './CreateTaskModal';
-import Toast from '../../../pages/Toast'; // ← MỚI
+import Toast from '../../../pages/Toast';
 import { useNotification } from '../../../context/NotificationContext';
 import { websocketService } from '../../../services/user/websocket.service';
 
@@ -20,13 +20,45 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string>('');
-  const [isReconnecting, setIsReconnecting] = useState(false); // ← MỚI
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
-  // ← MỚI: Sử dụng useNotification
   const { toasts, removeToast } = useNotification();
+
+  // ✅ MỚI: Refs để detect click outside
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const createMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchAvatarUrl();
+  }, []);
+
+  // ✅ MỚI: Handle click outside để đóng dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Đóng User Menu nếu click bên ngoài
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowUserMenu(false);
+      }
+
+      // Đóng Create Menu nếu click bên ngoài
+      if (
+        createMenuRef.current &&
+        !createMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowCreateMenu(false);
+      }
+    };
+
+    // Thêm event listener
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const fetchAvatarUrl = async () => {
@@ -84,7 +116,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         <div className="header-right">
           
           {/* Create Button */}
-          <div className="header-create-menu">
+          <div className="header-create-menu" ref={createMenuRef}>
             <button
               onClick={() => setShowCreateMenu(!showCreateMenu)}
               className="header-create-button"
@@ -97,7 +129,10 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
               <div className="header-create-dropdown">
                 <button
                   className="header-create-dropdown-item"
-                  onClick={() => setShowProjectModal(true)}
+                  onClick={() => {
+                    setShowCreateMenu(false);
+                    setShowProjectModal(true);
+                  }}
                 >
                   <span>Project</span>
                 </button>
@@ -112,7 +147,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           </div>
 
           {/* User Menu */}
-          <div className="header-user-menu">
+          <div className="header-user-menu" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="header-user-button"
@@ -165,8 +200,6 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
         )}
       </header>
 
-      {/* ========== TÍNH NĂNG MỚI ========== */}
-      
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 flex flex-col gap-3 z-50 max-w-md">
         {toasts.map((toast) => (
@@ -181,8 +214,6 @@ const Header: React.FC<HeaderProps> = ({ onLogout }) => {
           />
         ))}
       </div>
-
-      
     </>
   );
 };

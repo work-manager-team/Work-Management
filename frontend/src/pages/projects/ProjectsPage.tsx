@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter, Star } from 'lucide-react';
+import { Loader, Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter, Star } from 'lucide-react';
 import projectService, { Project, ProjectDetails } from '../../services/user/project.service';
 import recentActivityService from '../../services/user/recentActivity.service';
 import starredService from '../../services/user/starred.service';
@@ -20,25 +20,21 @@ const ProjectsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'my'>('all'); // 'all' or 'my'
+  const [filterType, setFilterType] = useState<'all' | 'my'>('all');
   const [projectCount, setProjectCount] = useState<{ all: number; my: number }>({ 
-  all: 0, 
-  my: 0 
+    all: 0, 
+    my: 0 
   });
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  // Modal state
+  
   const [selectedProjectForMembers, setSelectedProjectForMembers] = useState<{
     id: number;
     name: string;
   } | null>(null);
   
-  // ⭐ Starred state
   const [starredProjects, setStarredProjects] = useState<Set<string>>(new Set());
   
-  
-  
-  // Get current user ID
   const user = localStorage.getItem('user');
   const currentUserId = user ? JSON.parse(user).id : null;
   
@@ -46,7 +42,6 @@ const ProjectsPage = () => {
     fetchProjects();
     loadStarredProjects();
     
-    // Scroll event listener
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 3);
     };
@@ -55,7 +50,6 @@ const ProjectsPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [filterType]);
   
-  // Close filter menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
@@ -96,17 +90,11 @@ const ProjectsPage = () => {
       let allProjects: Project[] = [];
 
       if (filterType === 'my') {
-        // Fetch only user's projects
         allProjects = await projectService.getUserProjects(currentUserId);
-        // Cập nhật số lượng My Projects
         setProjectCount(prev => ({ ...prev, my: allProjects.length }));
       } else {
-        // Fetch all projects from database
-        // First, get the total count of projects
         const count = await getCountProjects();
-
-        // Thử fetch nhiều IDs hơn để đảm bảo có đủ projects
-        const maxAttempts = count * 2; // Thử gấp đôi hoặc ít nhất 10 IDs
+        const maxAttempts = count * 2;
         const projectPromises = [];
 
         for (let i = 1; i <= maxAttempts; i++) {
@@ -119,40 +107,32 @@ const ProjectsPage = () => {
         }
 
         const projectResults = await Promise.all(projectPromises);
-
-        // Filter out null values and flatten
         const allFetchedProjects = projectResults
           .filter(p => p !== null)
           .flat() as Project[];
-        // Lấy danh sách projects của user để kiểm tra membership
+          
         const userProjects = await projectService.getUserProjects(currentUserId);
         const userProjectIds = new Set(userProjects.map(p => p.id));
 
-        // Lọc chỉ hiển thị:
-        // 1. Projects có visibility = "public"
-        // 2. Projects mà user là thành viên (bất kể visibility)
         allProjects = allFetchedProjects.filter(project => {
           const isPublic = project.visibility.toLowerCase() === 'public';
           const isTeam = project.visibility.toLowerCase() === 'team';
           const isMember = userProjectIds.has(project.id);
           return isPublic || isMember || isTeam;
         });
-        // Cập nhật số lượng All Projects
+        
         setProjectCount(prev => ({ ...prev, all: allProjects.length }));
-        // Nếu vẫn chưa đủ, log warning
+        
         if (allProjects.length < count) {
           console.warn(`Expected ${count} projects but only found ${allProjects.length}`);
         }
       }
 
-      // Fetch member count for each project
       const projectsWithDetails = await Promise.all(
         allProjects.map(async (project) => {
           try {
-            // Fetch project members
             const members = await projectService.getProjectMembers(project.id);
             
-            // Count only active members with role 'member' or 'admin'
             const activeMemberCount = members.filter((member: any) => 
               member.status?.toLowerCase() === 'active' && 
               (member.role?.toLowerCase() === 'member' || member.role?.toLowerCase() === 'admin')
@@ -182,7 +162,6 @@ const ProjectsPage = () => {
   };
   
   const handleProjectClick = (projectId: number) => {
-    // Track project detail view
     const project = projects.find(p => p.id === projectId);
     if (project) {
       recentActivityService.trackProjectView({
@@ -195,9 +174,8 @@ const ProjectsPage = () => {
   };
 
   const handleShowMembers = (e: React.MouseEvent, projectId: number, projectName: string) => {
-    e.stopPropagation(); // Prevent project card click
+    e.stopPropagation();
     
-    // Track project members view
     recentActivityService.trackProjectView({
       id: projectId.toString(),
       name: projectName,
@@ -219,7 +197,6 @@ const ProjectsPage = () => {
   };
 
   const handleProjectCreated = () => {
-    // Refresh projects list after creating new project
     fetchProjects();
   };
 
@@ -227,16 +204,14 @@ const ProjectsPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
-  // ⭐ Load starred projects
   const loadStarredProjects = () => {
     const starred = starredService.getStarredProjects();
     const starredIds = new Set(starred.map(p => p.id));
     setStarredProjects(starredIds);
   };
 
-  // ⭐ Handle star toggle
   const handleToggleStar = (e: React.MouseEvent, project: ProjectWithDetails) => {
-    e.stopPropagation(); // Prevent project card click
+    e.stopPropagation();
     
     const isStarred = starredService.toggleProjectStar({
       id: project.id.toString(),
@@ -247,7 +222,6 @@ const ProjectsPage = () => {
       visibility: project.visibility
     });
     
-    // Update local state
     setStarredProjects(prev => {
       const newSet = new Set(prev);
       if (isStarred) {
@@ -278,20 +252,16 @@ const ProjectsPage = () => {
     project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.key.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  // Lấy số lượng hiện tại dựa trên filterType
+  
   const currentCount = filterType === 'all' ? projectCount.all : projectCount.my;
+  
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col">
-        {/* Header */}
-        {/* Page Content */}
-        <div className="flex-1 overflow-auto p-6"
-        
-        >
+        <div className="flex-1 overflow-auto p-6">
           {/* Search Bar with Filter */}
           <div className="bg-white rounded-lg shadow-sm p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 max-w-2xl">
-              {/* Search Input */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
@@ -303,7 +273,6 @@ const ProjectsPage = () => {
                 />
               </div>
 
-              {/* Filter Button */}
               <div className="relative" ref={filterMenuRef}>
                 <button
                   onClick={() => setShowFilterMenu(!showFilterMenu)}
@@ -324,7 +293,6 @@ const ProjectsPage = () => {
                   </span>
                 </button>
 
-                {/* Filter Dropdown Menu */}
                 {showFilterMenu && (
                   <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[180px]">
                     <button
@@ -348,18 +316,20 @@ const ProjectsPage = () => {
               </div>
             </div>
 
-            <button onClick={handleOpenCreateModal}
-            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ml-4">
+            <button 
+              onClick={handleOpenCreateModal}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 ml-4"
+            >
               <Plus size={20} />
               <span>New Project</span>
             </button>
           </div>
 
-          {/* Loading State */}
+          {/* ✅ UPDATED: Loading State với Loader icon */}
           {loading && (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="loading-spinner mb-4"></div>
-              <p className="text-gray-600">
+            <div className="bg-white rounded-lg shadow-lg p-12 flex flex-col items-center justify-center">
+              <Loader size={48} className="text-purple-500 animate-spin mb-4" />
+              <p className="text-gray-600 text-lg">
                 Loading {filterType === 'my' ? 'your' : 'all'} projects...
               </p>
             </div>
@@ -401,7 +371,6 @@ const ProjectsPage = () => {
                             </h3>
                           </div>
                           <div className="flex items-center gap-2">
-                            {/* ⭐ Star Button */}
                             <button
                               onClick={(e) => handleToggleStar(e, project)}
                               className={`p-1.5 rounded-full transition-all ${
@@ -426,17 +395,17 @@ const ProjectsPage = () => {
 
                       {/* Project Body */}
                       <div className="p-6">
-                        {/* Status */}
                         <div className="mb-4">
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                             Status
                           </span>
                           <p className="text-sm font-medium text-gray-800 capitalize mt-1">
-                            {project.status}
+                            {project.status.split('_')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                            .join(' ')}
                           </p>
                         </div>
 
-                        {/* Visibility */}
                         <div className="mb-4">
                           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                             Visibility
@@ -446,7 +415,6 @@ const ProjectsPage = () => {
                           </p>
                         </div>
 
-                        {/* Footer */}
                         <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                           <div className="flex items-center space-x-2 text-sm text-gray-600">
                             <Users size={16} />

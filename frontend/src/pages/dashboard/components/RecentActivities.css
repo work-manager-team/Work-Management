@@ -17,6 +17,11 @@
 .recent-activities-empty .empty-icon {
   color: #dfe1e6;
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .recent-activities-empty h3 {

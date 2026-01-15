@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Trash2, Clock, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Bell, Trash2, Clock, Wifi, WifiOff, RefreshCw, Loader } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { websocketService } from '../../services/user/websocket.service';
 
@@ -151,10 +151,12 @@ const NotificationsPage = () => {
 
                 {/* Loading State */}
                 {loading && (
-                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                        <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                        <p className="text-gray-600">Loading notifications...</p>
+                <div className="flex items-center justify-center h-96">
+                    <div className="flex flex-col items-center">
+                    <Loader size={48} className="text-purple-500 animate-spin mb-4" />
+                    <p className="text-gray-600 text-lg">Loading notifications...</p>
                     </div>
+                </div>
                 )}
 
                 {/* Notifications List */}

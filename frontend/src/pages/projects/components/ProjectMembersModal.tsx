@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { X, User, UserPlus, Trash2, Check } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Check, Loader } from 'lucide-react';
 import projectService, { ProjectMember, User as UserType } from '../../../services/user/project.service';
 import './ProjectMembersModal.css';
 import authService from '../../../services/user/auth.service';
@@ -465,11 +465,18 @@ const ProjectMembersModal: React.FC<ProjectMembersModalProps> = ({
           {/* Body */}
           <div className="modal-body">
             {loading ? (
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Loading members...</p>
-              </div>
-            ) : error ? (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '60px 20px'
+            }}>
+              <Loader size={40} className="text-purple-500 animate-spin mb-3" />
+              <p style={{ color: '#6b7280' }}>Loading members...</p>
+            </div>
+          ) : error ? (
+  
               <div className="error-container">
                 <p className="error-message">{error}</p>
                 <button onClick={() => fetchMembers()} className="retry-button">

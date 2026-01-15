@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X, User, Star } from 'lucide-react';
+import { Search, Filter, ChevronDown, Plus, MessageCircle, Trash2, Edit2, X, User, Star, Loader } from 'lucide-react';
 import Layout from '../../components/layout/Layout';
 import { apiCall, getAuthHeaders } from '../../utils/api';
 import recentActivityService from '../../services/user/recentActivity.service';
@@ -712,27 +712,18 @@ const BoardsPage = () => {
                             )}
                         </div>
 
-                        {/* Search */}
-                        <div className="flex items-center gap-3">
-                            <div className="relative flex-1 max-w-xs">
-                                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search tasks"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                />
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
 
                 {/* Loading State */}
                 {loading && (
-                    <div className="flex items-center justify-center h-96">
-                        <div className="text-gray-500">Loading tasks...</div>
+                <div className="flex items-center justify-center h-96">
+                    <div className="flex flex-col items-center">
+                    <Loader size={48} className="text-purple-500 animate-spin mb-4" />
+                    <p className="text-gray-600 text-lg">Loading tasks...</p>
                     </div>
+                </div>
                 )}
                 
                 {/* Kanban Board */}

@@ -104,19 +104,9 @@ const RecentActivities: React.FC<RecentActivitiesProps> = ({
     }
   };
 
-  if (recentItems.length === 0) {
-    return (
-      <div className="recent-activities-empty">
-        <Clock size={48} className="empty-icon" />
-        <h3>No recent activity</h3>
-        <p>Your recently viewed projects and tasks will appear here</p>
-      </div>
-    );
-  }
-
   return (
     <div className="recent-activities">
-      {/* Tabs */}
+      {/* Tabs - Always visible */}
       <div className="recent-tabs">
         <button
           className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
@@ -140,80 +130,88 @@ const RecentActivities: React.FC<RecentActivitiesProps> = ({
         </button>
       </div>
 
-      {/* Recent Items List */}
-      <div className="recent-items-list">
-        {recentItems.map((item) => (
-          <div
-            key={`${item.type}-${item.id}`}
-            className="recent-item"
-            onClick={() => handleItemClick(item)}
-          >
-            <div className="item-icon">
-              {item.type === 'project' ? (
-                <FolderOpen size={20} />
-              ) : (
-                <CheckSquare 
-                  size={20} 
-                  style={{ color: getStatusColor(item.status) }}
-                />
-              )}
-            </div>
-
-            <div className="item-content">
-              <div className="item-header">
-                <span className="item-name">{item.name}</span>
-                <span className="item-type-badge">
-                  {item.type}
-                </span>
-              </div>
-
-              {item.description && (
-                <p className="item-description">{item.description}</p>
-              )}
-
-              <div className="item-meta">
-                {/* Event Type Badge for Projects */}
-                {item.type === 'project' && item.eventType && (
-                  <span className="event-type-badge">
-                    {getEventIcon(item.eventType)}
-                    {getEventLabel(item.eventType)}
-                  </span>
-                )}
-                
-                {item.projectName && (
-                  <span className="project-link">
-                    <FolderOpen size={12} />
-                    {item.projectName}
-                  </span>
-                )}
-                {item.status && (
-                  <span 
-                    className="task-status"
-                    style={{ 
-                      backgroundColor: `${getStatusColor(item.status)}15`,
-                      color: getStatusColor(item.status)
-                    }}
-                  >
-                    {item.status}
-                  </span>
-                )}
-                <span className="item-time">
-                  <Clock size={12} />
-                  {recentActivityService.getTimeAgo(item.timestamp)}
-                </span>
-              </div>
-            </div>
-
-            <button
-              className="remove-button"
-              onClick={(e) => handleRemoveItem(e, item)}
-              aria-label="Remove from recent"
+      {/* Recent Items List or Empty State */}
+      {recentItems.length === 0 ? (
+        <div className="recent-activities-empty">
+          <Clock size={48} className="empty-icon" />
+          <h3>No recent activity</h3>
+          <p>Your recently viewed projects and tasks will appear here</p>
+        </div>
+      ) : (
+        <div className="recent-items-list">
+          {recentItems.map((item) => (
+            <div
+              key={`${item.type}-${item.id}`}
+              className="recent-item"
+              onClick={() => handleItemClick(item)}
             >
-              <X size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
+              <div className="item-icon">
+                {item.type === 'project' ? (
+                  <FolderOpen size={20} />
+                ) : (
+                  <CheckSquare 
+                    size={20} 
+                    style={{ color: getStatusColor(item.status) }}
+                  />
+                )}
+              </div>
+
+              <div className="item-content">
+                <div className="item-header">
+                  <span className="item-name">{item.name}</span>
+                  <span className="item-type-badge">
+                    {item.type}
+                  </span>
+                </div>
+
+                {item.description && (
+                  <p className="item-description">{item.description}</p>
+                )}
+
+                <div className="item-meta">
+                  {/* Event Type Badge for Projects */}
+                  {item.type === 'project' && item.eventType && (
+                    <span className="event-type-badge">
+                      {getEventIcon(item.eventType)}
+                      {getEventLabel(item.eventType)}
+                    </span>
+                  )}
+                  
+                  {item.projectName && (
+                    <span className="project-link">
+                      <FolderOpen size={12} />
+                      {item.projectName}
+                    </span>
+                  )}
+                  {item.status && (
+                    <span 
+                      className="task-status"
+                      style={{ 
+                        backgroundColor: `${getStatusColor(item.status)}15`,
+                        color: getStatusColor(item.status)
+                      }}
+                    >
+                      {item.status}
+                    </span>
+                  )}
+                  <span className="item-time">
+                    <Clock size={12} />
+                    {recentActivityService.getTimeAgo(item.timestamp)}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                className="remove-button"
+                onClick={(e) => handleRemoveItem(e, item)}
+                aria-label="Remove from recent"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
