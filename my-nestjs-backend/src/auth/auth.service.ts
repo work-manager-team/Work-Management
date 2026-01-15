@@ -335,6 +335,55 @@ export class AuthService {
   }
 
   /**
+   * Reset password with OTP (NEW)
+   */
+  async resetPasswordWithOtp(email: string, otp: string, newPassword: string): Promise<void> {
+    const otpKey = `reset:${email.toLowerCase()}`;
+    const stored = this.otpStore.get(otpKey);
+
+    if (!stored) {
+      throw new BadRequestException('Mã OTP không tồn tại hoặc đã hết hạn');
+    }
+
+    // Check expiration
+    if (new Date() > stored.expiresAt) {
+      this.otpStore.delete(otpKey);
+      throw new BadRequestException('Mã OTP đã hết hạn');
+    }
+
+    // Check OTP match
+    if (stored.otp !== otp) {
+      throw new BadRequestException('Mã OTP không đúng');
+    }
+
+    // Find user
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+
+    if (!user) {
+      throw new NotFoundException('User không tồn tại');
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await this.db
+      .update(users)
+      .set({
+        passwordHash: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    // Delete OTP after successful reset
+    this.otpStore.delete(otpKey);
+  }
+
+  /**
    * Get user by email
    */
   async getUserByEmail(email: string): Promise<User | undefined> {

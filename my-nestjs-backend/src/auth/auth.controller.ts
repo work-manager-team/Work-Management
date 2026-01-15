@@ -18,7 +18,7 @@ import { EmailService } from '../email/email.service';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResetPasswordOtpDto } from './dto/reset-password-otp.dto';
 import { RequestChangeEmailDto } from './dto/request-change-email.dto';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { OtpRequestDto, OtpVerifyDto } from './dto/otp-request.dto';
@@ -126,7 +126,7 @@ export class AuthController {
   }
 
   /**
-   * Request password reset
+   * Request password reset with OTP
    */
   @Public()
   @Post('forgot-password')
@@ -138,46 +138,54 @@ export class AuthController {
       // Don't reveal if email exists or not (security best practice)
       return {
         statusCode: 200,
-        message: 'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi',
+        message: 'Nếu email tồn tại, mã OTP đã được gửi',
       };
     }
 
-    // Generate reset token
-    const token = this.authService.generateToken(user.id, user.email, 'password_reset');
+    // Generate OTP for password reset
+    const otp = this.authService.generateOTP();
 
-    // Build reset link - Note: For password reset, we might want to redirect to frontend with token
-    // since user needs to enter new password in a form
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
-    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+    // Store OTP with prefix to distinguish from login OTP
+    this.authService.storeOTP(`reset:${user.email}`, otp);
 
-    // Send password reset email
+    // Send OTP email for password reset
     try {
-      await this.emailService.sendPasswordResetEmail(
+      await this.emailService.sendPasswordResetOTPEmail(
         user.email,
         user.fullName || user.username,
-        resetLink,
+        otp,
       );
     } catch (error) {
-      console.error('Failed to send password reset email:', error);
+      console.error('Failed to send password reset OTP email:', error);
     }
 
     return {
       statusCode: 200,
-      message: 'Link đặt lại mật khẩu đã được gửi đến email của bạn',
-      token, // Return token for testing
+      message: 'Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn',
+      otp, // Return OTP for testing (remove in production!)
       userId: user.id,
       email: user.email,
     };
   }
 
   /**
-   * Reset password with token
+   * Reset password with OTP
    */
   @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    await this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+  async resetPassword(@Body() resetPasswordOtpDto: ResetPasswordOtpDto) {
+    // Validate passwords match
+    if (resetPasswordOtpDto.newPassword !== resetPasswordOtpDto.confirmPassword) {
+      throw new BadRequestException('Mật khẩu và xác nhận mật khẩu không khớp');
+    }
+
+    // Verify OTP and reset password
+    await this.authService.resetPasswordWithOtp(
+      resetPasswordOtpDto.email,
+      resetPasswordOtpDto.otp,
+      resetPasswordOtpDto.newPassword,
+    );
 
     return {
       statusCode: 200,
