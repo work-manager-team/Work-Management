@@ -54,30 +54,23 @@ export class AuthController {
 
   /**
    * Verify email with token (GET - for email links)
-   * User clicks link in email → directly verifies
+   * User clicks link in email → verifies and redirects to login page
    */
   @Public()
   @Get('verify-email/:token')
-  @HttpCode(HttpStatus.OK)
   async verifyEmailViaLink(@Req() req: Request, @Res() res: Response) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+
     try {
       const token = req.params.token;
-      const user = await this.authService.verifyEmail(token);
+      await this.authService.verifyEmail(token);
 
-      const { passwordHash, ...userWithoutPassword } = user;
-
-      return res.status(200).json({
-        statusCode: 200,
-        message: 'Email đã được xác thực thành công! Bạn có thể đóng trang này và đăng nhập.',
-        user: userWithoutPassword,
-        success: true,
-      });
+      // Redirect to login page with success message
+      return res.redirect(`${frontendUrl}/login?verified=true&message=Email đã được xác thực thành công! Bạn có thể đăng nhập ngay.`);
     } catch (error) {
-      return res.status(400).json({
-        statusCode: 400,
-        message: error.message || 'Xác thực email thất bại',
-        success: false,
-      });
+      // Redirect to login page with error message
+      const errorMessage = encodeURIComponent(error.message || 'Xác thực email thất bại');
+      return res.redirect(`${frontendUrl}/login?verified=false&message=${errorMessage}`);
     }
   }
 
