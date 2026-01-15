@@ -9,7 +9,20 @@
       "Bash(ls:*)",
       "Bash(del /Q \"GOOGLE_LOGIN_STRATEGY.md\" \"GOOGLE_OAUTH_IMPLEMENTATION.md\" \"EMAIL_AUTH_DOCUMENTATION.md\" \"EMAIL_SERVICES_COMPARISON.md\" \"EMAIL_VERIFICATION_STRATEGY.md\" \"SETUP_CHECKLIST.md\" \"SETUP_COMPLETED.md\" \"AUTO_NOTIFICATION_GUIDE.md\")",
       "Bash(exit 0)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(npm init:*)",
+      "Bash(npm test:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout 30 npm run build:*)",
+      "Bash(node --version:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(test:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

@@ -20,6 +20,7 @@ import { JwtService } from '@nestjs/jwt';
       'http://localhost:5174',
       'http://127.0.0.1:5173',
       'https://work-management-chi.vercel.app',
+      'https://jira-frontend-roan.vercel.app',
       /\.vercel\.app$/,
     ],
     credentials: true,
