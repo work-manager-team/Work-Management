@@ -36,7 +36,6 @@ const ProjectsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'my'>('all');
   const [filterInitialized, setFilterInitialized] = useState(true);
@@ -45,6 +44,7 @@ const ProjectsPage = () => {
     my: 0 
   });
   const filterMenuRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null); // ✅ Ref cho scroll container
   const [showCreateModal, setShowCreateModal] = useState(false);
   
   // ✅ Invitations state
@@ -305,15 +305,8 @@ const ProjectsPage = () => {
       setError('Your session has expired. Please login again.');
     }
     
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 3);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    
     // ✅ Cleanup function
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       // Abort any ongoing requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -385,7 +378,10 @@ const ProjectsPage = () => {
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // ✅ Scroll container thay vì window
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
   
   const handleToggleStar = (e: React.MouseEvent, project: Project) => {
@@ -438,7 +434,7 @@ const ProjectsPage = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-auto p-6">
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto p-6">{/* ✅ Added ref */}
           {/* Search Bar with Filter */}
           <div className="bg-white rounded-lg shadow-sm p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1 max-w-2xl">
@@ -653,16 +649,14 @@ const ProjectsPage = () => {
         </div>
       </div>
 
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-50"
-          aria-label="Scroll to top"
-        >
-          <ArrowUp size={24} />
-        </button>
-      )}
+      {/* Scroll to Top Button - Always visible */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-8 right-8 bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-full shadow-lg transition-all hover:scale-110 z-50"
+        aria-label="Scroll to top"
+      >
+        <ArrowUp size={24} />
+      </button>
 
       {/* Members Modal */}
       {selectedProjectForMembers && (
