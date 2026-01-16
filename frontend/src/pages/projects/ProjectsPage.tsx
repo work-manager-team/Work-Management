@@ -4,14 +4,9 @@ import { Loader, Search, Plus, Users, MoreVertical, ArrowUp, Folder, Filter, Sta
 import projectService, { Project, ProjectDetails } from '../../services/user/project.service';
 import recentActivityService from '../../services/user/recentActivity.service';
 import starredService from '../../services/user/starred.service';
-import { apiCall } from '../../utils/api';
 import ProjectMembersModal from './components/ProjectMembersModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import './components/InvitationsModal.css';
-
-interface ProjectWithDetails extends Project {
-  memberCount?: number;
-}
 
 interface Invitation {
   id: number;
@@ -37,14 +32,14 @@ interface Invitation {
 const ProjectsPage = () => {
   const navigate = useNavigate();
   
-  const [projects, setProjects] = useState<ProjectWithDetails[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'my'>('all');
-  const [filterInitialized, setFilterInitialized] = useState(false);
+  const [filterInitialized, setFilterInitialized] = useState(true);
   const [projectCount, setProjectCount] = useState<{ all: number; my: number }>({ 
     all: 0, 
     my: 0 
@@ -72,16 +67,24 @@ const ProjectsPage = () => {
   const user = localStorage.getItem('user');
   const currentUserId = user ? JSON.parse(user).id : null;
   
+  // ✅ Track if already fetched to prevent double calls
+  const hasFetchedRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
   // ✅ Fetch invitations count
   const fetchInvitationsCount = useCallback(async () => {
     try {
-      const response = await apiCall('https://work-management-chi.vercel.app/projects/my-invitations', {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('https://work-management-chi.vercel.app/projects/my-invitations', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Handle both array and single object
         const count = Array.isArray(data) ? data.length : (data ? 1 : 0);
         setInvitationsCount(count);
       }
@@ -90,17 +93,19 @@ const ProjectsPage = () => {
     }
   }, []);
   
-  // ✅ Fetch full invitations list
   const fetchInvitations = useCallback(async () => {
     setInvitationsLoading(true);
     setInvitationsError(null);
 
     try {
-      const response = await apiCall('https://work-management-chi.vercel.app/projects/my-invitations', {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('https://work-management-chi.vercel.app/projects/my-invitations', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
-
-      console.log('Fetch invitations response:', response);
 
       if (response.status === 401 || response.status === 403) {
         setInvitationsError('Your session has expired. Please refresh the page.');
@@ -113,13 +118,10 @@ const ProjectsPage = () => {
       }
 
       const data = await response.json();
-      console.log('Invitations data:', data);
 
-      // Ensure data is always an array
       if (Array.isArray(data)) {
         setInvitations(data);
       } else if (data && typeof data === 'object') {
-        // If it's a single object, wrap it in an array
         setInvitations([data]);
       } else {
         setInvitations([]);
@@ -133,7 +135,6 @@ const ProjectsPage = () => {
     }
   }, []);
   
-  // ✅ Format date helper
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -155,7 +156,6 @@ const ProjectsPage = () => {
     }
   };
   
-  // ✅ Handle invitation click
   const handleInvitationClick = (invitationId: number) => {
     if (selectedInvitationId === invitationId) {
       setSelectedInvitationId(null);
@@ -166,12 +166,10 @@ const ProjectsPage = () => {
     }
   };
 
-  // ✅ Handle action change
   const handleActionChange = (action: 'accept' | 'reject') => {
     setSelectedAction(action);
   };
 
-  // ✅ Handle confirm invitation
   const handleConfirmInvitation = async () => {
     if (!selectedInvitationId || !selectedAction) {
       setInvitationsError('Please select an action (Accept or Reject)');
@@ -186,8 +184,13 @@ const ProjectsPage = () => {
         ? `https://work-management-chi.vercel.app/project-invitations/${selectedInvitationId}/accept`
         : `https://work-management-chi.vercel.app/project-invitations/${selectedInvitationId}/reject`;
 
-      const response = await apiCall(endpoint, {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(endpoint, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.status === 401 || response.status === 403) {
@@ -218,71 +221,65 @@ const ProjectsPage = () => {
     }
   };
   
-  const fetchProjects = useCallback(async () => {
+  // ✅ Simplified: Only fetch projects list, NO member count
+  const fetchProjects = async () => {
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
     setLoading(true);
     setError(null);
 
     try {
-      let allProjects: Project[] = [];
-
+      const token = localStorage.getItem('accessToken');
+      
+      let url = 'https://work-management-chi.vercel.app/projects';
       if (filterType === 'my') {
-        // Fetch user's projects using API with userId
-        const response = await apiCall(`https://work-management-chi.vercel.app/projects?userId=${currentUserId}`, {
-          method: 'GET',
-        });
+        url = `https://work-management-chi.vercel.app/projects?userId=${currentUserId}`;
+      }
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch user projects: ${response.statusText}`);
-        }
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        signal,
+      });
 
-        allProjects = await response.json();
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+
+      const allProjects = await response.json();
+      
+      // Update project count
+      if (filterType === 'my') {
         setProjectCount(prev => ({ ...prev, my: allProjects.length }));
       } else {
-        // ✅ Fetch all projects using API endpoint
-        const response = await apiCall('https://work-management-chi.vercel.app/projects', {
-          method: 'GET',
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch projects: ${response.statusText}`);
-        }
-
-        allProjects = await response.json();
         setProjectCount(prev => ({ ...prev, all: allProjects.length }));
       }
 
-      const projectsWithDetails = await Promise.all(
-        allProjects.map(async (project) => {
-          try {
-            const members = await projectService.getProjectMembers(project.id);
-            
-            const activeMemberCount = members.filter((member: any) => 
-              member.status?.toLowerCase() === 'active' && 
-              (member.role?.toLowerCase() === 'member' || member.role?.toLowerCase() === 'admin' || member.role?.toLowerCase() === 'viewer')
-            ).length;
-            
-            return {
-              ...project,
-              memberCount: activeMemberCount,
-            };
-          } catch (err) {
-            console.error(`Error fetching members for project ${project.id}:`, err);
-            return {
-              ...project,
-              memberCount: 0,
-            };
-          }
-        })
-      );
-
-      setProjects(projectsWithDetails);
+      // Only update if not aborted
+      if (!signal.aborted) {
+        setProjects(allProjects);
+      }
     } catch (err: any) {
-      console.error('Error fetching projects:', err);
-      setError(err.message || 'Failed to load projects');
+      if (err.name !== 'AbortError') {
+        console.error('Error fetching projects:', err);
+        setError(err.message || 'Failed to load projects');
+      }
     } finally {
-      setLoading(false);
+      if (!signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [filterType, currentUserId]);
+  };
   
   const loadStarredProjects = useCallback(() => {
     const starred = starredService.getStarredProjects();
@@ -290,15 +287,19 @@ const ProjectsPage = () => {
     setStarredProjects(starredIds);
   }, []);
   
+  // ✅ Simplified useEffect with proper cleanup
   useEffect(() => {
-    // Only fetch when user has selected a filter
+    // Prevent double fetch in development (React.StrictMode)
+    if (hasFetchedRef.current) return;
+    
     if (filterInitialized) {
+      hasFetchedRef.current = true;
       fetchProjects();
     }
+    
     loadStarredProjects();
     fetchInvitationsCount();
     
-    // Check if auth expired and show error
     if (sessionStorage.getItem('authExpired')) {
       sessionStorage.removeItem('authExpired');
       setError('Your session has expired. Please login again.');
@@ -309,8 +310,18 @@ const ProjectsPage = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [filterInitialized, filterType, fetchProjects, loadStarredProjects, fetchInvitationsCount]);
+    
+    // ✅ Cleanup function
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      // Abort any ongoing requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      // Reset fetch flag when filter changes
+      hasFetchedRef.current = false;
+    };
+  }, [filterType]);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -322,24 +333,6 @@ const ProjectsPage = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
-  const getCountProjects = async (): Promise<number> => {
-    try {
-      const response = await apiCall('https://work-management-chi.vercel.app/projects/count', {
-        method: 'GET',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch project count: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.count;
-    } catch (error) {
-      console.error('Error in getCountProjects:', error);
-      throw error;
-    }
-  };
   
   const handleProjectClick = (projectId: number) => {
     const project = projects.find(p => p.id === projectId);
@@ -377,12 +370,11 @@ const ProjectsPage = () => {
   };
 
   const handleProjectCreated = () => {
+    hasFetchedRef.current = false;
     fetchProjects();
   };
   
-  // ✅ Invitations modal handlers
   const handleOpenInvitationsModal = async () => {
-    console.log('Opening invitations modal...');
     setShowInvitationsModal(true);
     setInvitationsLoading(true);
     await fetchInvitations();
@@ -396,7 +388,7 @@ const ProjectsPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
-  const handleToggleStar = (e: React.MouseEvent, project: ProjectWithDetails) => {
+  const handleToggleStar = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     
     const isStarred = starredService.toggleProjectStar({
@@ -423,6 +415,7 @@ const ProjectsPage = () => {
     setFilterType(type);
     setFilterInitialized(true);
     setShowFilterMenu(false);
+    hasFetchedRef.current = false;
   };
 
   const getStatusColor = (status: string) => {
@@ -503,9 +496,7 @@ const ProjectsPage = () => {
               </div>
             </div>
 
-            {/* ✅ NEW: Action Buttons Group */}
             <div className="flex items-center gap-3 ml-4">
-              {/* Invitations Button */}
               <button 
                 onClick={handleOpenInvitationsModal}
                 className="relative bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
@@ -519,7 +510,6 @@ const ProjectsPage = () => {
                 )}
               </button>
 
-              {/* New Project Button */}
               <button 
                 onClick={handleOpenCreateModal}
                 className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
@@ -530,7 +520,7 @@ const ProjectsPage = () => {
             </div>
           </div>
 
-          {/* Loading State */}
+          {/* ✅ Simple Loading State - Only spinner, no progress bar */}
           {loading && (
             <div className="bg-white rounded-lg shadow-lg p-12 flex flex-col items-center justify-center">
               <Loader size={48} className="text-purple-500 animate-spin mb-4" />
@@ -554,7 +544,10 @@ const ProjectsPage = () => {
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
               <p className="text-red-600 mb-4">{error}</p>
               <button 
-                onClick={fetchProjects}
+                onClick={() => {
+                  hasFetchedRef.current = false;
+                  fetchProjects();
+                }}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
               >
                 Try Again
@@ -629,11 +622,8 @@ const ProjectsPage = () => {
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                          <div className="flex items-center space-x-2 text-sm text-gray-600">
-                            <Users size={16} />
-                            <span>{project.memberCount || 0} members</span>
-                          </div>
+                        {/* ✅ Removed member count section, only show menu button */}
+                        <div className="flex items-center justify-end pt-4 border-t border-gray-200">
                           <button
                             onClick={(e) => handleShowMembers(e, project.id, project.name)}
                             className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
@@ -691,14 +681,13 @@ const ProjectsPage = () => {
         />
       )}
 
-      {/* ✅ Invitations Modal - Inline */}
+      {/* Invitations Modal */}
       {showInvitationsModal && (
         <div className="modal-overlay" onClick={() => setShowInvitationsModal(false)}>
           <div
             className="invitations-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="invitations-modal-header">
               <div className="header-title">
                 <Mail size={24} className="text-purple-500" />
@@ -718,7 +707,6 @@ const ProjectsPage = () => {
               </button>
             </div>
 
-            {/* Body */}
             <div className="invitations-modal-body">
               {invitationsLoading ? (
                 <div className="loading-container">
@@ -779,7 +767,6 @@ const ProjectsPage = () => {
                     ))}
                   </div>
 
-                  {/* Action Selection */}
                   {selectedInvitationId && (
                     <div className="action-section">
                       <p className="action-label">Choose your action:</p>
@@ -811,7 +798,6 @@ const ProjectsPage = () => {
               )}
             </div>
 
-            {/* Footer */}
             {invitations.length > 0 && selectedInvitationId && (
               <div className="invitations-modal-footer">
                 {invitationsError && (
